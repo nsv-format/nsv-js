@@ -47,7 +47,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-nsv = "*"
+nsv = "0.2"
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 `;

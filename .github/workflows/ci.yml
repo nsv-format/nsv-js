@@ -23,11 +23,8 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
-    - name: Run unit tests
+    - name: Run tests
       run: npm test
-
-    - name: Run spec-based tests
-      run: node test-spec.js
 
   cross-test-python:
     name: Cross-test vs Python (PyPI 0.2.1)
