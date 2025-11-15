@@ -1,6 +1,8 @@
 const nsv = require('./index');
 const { execSync } = require('child_process');
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 // Test cases
 const tests = [
@@ -24,16 +26,19 @@ console.log('='.repeat(60) + '\n');
 let passCount = 0;
 let failCount = 0;
 
+// Create temp file for input
+const tmpFile = path.join(os.tmpdir(), 'nsv-test-input.txt');
+
 for (const test of tests) {
   // Write test input to temp file
-  fs.writeFileSync('/tmp/test_input.txt', test.input);
+  fs.writeFileSync(tmpFile, test.input);
 
   // Run Python implementation from PyPI
   let pythonResult;
   try {
-    const output = execSync(`python3 run_python_pypi.py /tmp/test_input.txt`, {
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe']
+    const pythonCode = `import sys; import json; import nsv; f = open(sys.argv[1]); result = nsv.load(f); f.close(); print(json.dumps(result))`;
+    const output = execSync(`python3 -c ${JSON.stringify(pythonCode)} ${JSON.stringify(tmpFile)}`, {
+      encoding: 'utf8'
     });
     pythonResult = JSON.parse(output.trim());
   } catch (e) {
@@ -59,6 +64,13 @@ for (const test of tests) {
     console.log(`  JS:     ${JSON.stringify(jsResult)}`);
     failCount++;
   }
+}
+
+// Cleanup
+try {
+  fs.unlinkSync(tmpFile);
+} catch (e) {
+  // Ignore cleanup errors
 }
 
 console.log('\n' + '='.repeat(60));
