@@ -2,6 +2,8 @@
 
 A modern, ergonomic JavaScript library for working with the NSV (Newline-Separated Values) format.
 
+[![CI](https://github.com/nsv-format/nsv-js/workflows/CI/badge.svg)](https://github.com/nsv-format/nsv-js/actions)
+
 ## What is NSV?
 
 NSV is a plain text format for representing sequences of sequences (tabular data). It's designed to be:
@@ -210,6 +212,30 @@ for await (const row of reader) {
 - Supports `for await...of` iteration
 
 ---
+
+## Testing
+
+```bash
+# Run unit tests
+npm test
+
+# Run spec-based tests
+node test-spec.js
+
+# Cross-test against Python implementation (requires nsv from PyPI)
+node cross-test-python.js
+
+# Cross-test against Rust implementation (requires cargo and nsv crate)
+node cross-test-rust.js
+```
+
+## Compatibility
+
+This implementation has been cross-tested against:
+- [nsv-python](https://pypi.org/project/nsv/) (PyPI) - 100% compatible
+- [nsv-rust](https://crates.io/crates/nsv) (crates.io) - 100% compatible
+
+All implementations pass the same test suite, ensuring semantic compatibility across languages.
 
 ## Usage Examples
 
