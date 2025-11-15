@@ -2,29 +2,26 @@
 
 import { Readable, Writable } from 'stream';
 
-export type NSVData = string[][];
-export type NSVRow = string[];
-
 /**
  * Parse NSV string into array of arrays
  * @param text - NSV formatted string
  * @returns Array of rows, each row is an array of cells
  */
-export function parse(text: string): NSVData;
+export function parse(text: string): string[][];
 
 /**
  * Serialize array of arrays to NSV string
  * @param data - Array of rows to serialize
  * @returns NSV formatted string
  */
-export function stringify(data: NSVData): string;
+export function stringify(data: string[][]): string;
 
 /**
  * Parse NSV from a readable stream or string
  * @param input - Stream or string to parse
  * @returns Promise resolving to parsed data
  */
-export function load(input: Readable | string): Promise<NSVData>;
+export function load(input: Readable | string): Promise<string[][]>;
 
 /**
  * Serialize data to NSV and write to stream
@@ -32,7 +29,7 @@ export function load(input: Readable | string): Promise<NSVData>;
  * @param output - Stream to write to
  * @returns Promise that resolves when writing is complete
  */
-export function dump(data: NSVData, output: Writable): Promise<void>;
+export function dump(data: string[][], output: Writable): Promise<void>;
 
 /**
  * Writer for incrementally writing NSV rows
@@ -44,13 +41,13 @@ export class Writer {
    * Write a single row
    * @param row - Array of cell values
    */
-  writeRow(row: NSVRow): Promise<void>;
+  writeRow(row: string[]): Promise<void>;
 
   /**
    * Write multiple rows
    * @param rows - Array of rows
    */
-  writeRows(rows: NSVData): Promise<void>;
+  writeRows(rows: string[][]): Promise<void>;
 }
 
 /**
@@ -63,18 +60,18 @@ export class Reader {
    * Read next row
    * @returns Next row or null if no more rows
    */
-  readRow(): Promise<NSVRow | null>;
+  readRow(): Promise<string[] | null>;
 
   /**
    * Read all remaining rows
    * @returns All remaining rows
    */
-  readRows(): Promise<NSVData>;
+  readRows(): Promise<string[][]>;
 
   /**
    * Async iterator support
    */
-  [Symbol.asyncIterator](): AsyncIterableIterator<NSVRow>;
+  [Symbol.asyncIterator](): AsyncIterableIterator<string[]>;
 }
 
 /**
