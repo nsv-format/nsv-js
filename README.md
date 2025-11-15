@@ -67,25 +67,26 @@ const text = nsv.stringify(data);
 //
 ```
 
-## Streams
+## Streaming
+
+Process large files incrementally without loading everything into memory:
 
 ```javascript
 const fs = require('fs');
+const nsv = require('@nsv-format/nsv');
 
-// Read from file
-const data = await nsv.load(fs.createReadStream('data.nsv'));
+const reader = new nsv.Reader(fs.createReadStream('input.nsv'));
+const writer = new nsv.Writer(fs.createWriteStream('output.nsv'));
 
-// Write to file
-await nsv.dump(data, fs.createWriteStream('output.nsv'));
-
-// Process incrementally
-const reader = new nsv.Reader(fs.createReadStream('large.nsv'));
-const writer = new nsv.Writer(fs.createWriteStream('processed.nsv'));
-
+// Process rows one at a time - bounded memory usage
 for await (const row of reader) {
-  await writer.writeRow(row);
+  // Transform each row
+  const transformed = row.map(cell => cell.toUpperCase());
+  await writer.writeRow(transformed);
 }
 ```
+
+The `Reader` truly streams - it parses rows as data arrives, not after loading the entire file. Works with infinite streams.
 
 ## API
 
@@ -113,7 +114,8 @@ Type definitions included.
 
 ```typescript
 import * as nsv from '@nsv-format/nsv';
-import { NSVData, NSVRow } from '@nsv-format/nsv';
+
+const data: string[][] = nsv.parse(text);
 ```
 
 ## Compatibility
