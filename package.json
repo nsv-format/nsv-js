@@ -1,14 +1,38 @@
 {
   "name": "@nsv-format/nsv",
-  "version": "0.0.1", 
-  "description": "NSV (Newline-Separated Values) format parser - JavaScript implementation coming soon",
+  "version": "1.0.0",
+  "description": "Modern, ergonomic JavaScript library for NSV (Newline-Separated Values) format - a simpler, git-friendly alternative to CSV",
   "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node test.js"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/nsv-format/nsv-js"
   },
-  "keywords": ["nsv", "csv", "data", "format", "parser"],
+  "keywords": [
+    "nsv",
+    "csv",
+    "tsv",
+    "data",
+    "format",
+    "parser",
+    "serializer",
+    "newline-separated",
+    "tabular-data",
+    "git-friendly"
+  ],
   "author": "naming",
   "license": "MIT",
-  "homepage": "https://nsv-format.org"
+  "homepage": "https://github.com/nsv-format/nsv-js#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  }
 }
