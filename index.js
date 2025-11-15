@@ -21,17 +21,22 @@ function unescape(str) {
   let i = 0;
 
   while (i < str.length) {
-    if (str[i] === '\\' && i + 1 < str.length) {
-      const next = str[i + 1];
-      if (next === '\\') {
-        result += '\\';
-        i += 2;
-      } else if (next === 'n') {
-        result += '\n';
-        i += 2;
+    if (str[i] === '\\') {
+      if (i + 1 < str.length) {
+        const next = str[i + 1];
+        if (next === '\\') {
+          result += '\\';
+          i += 2;
+        } else if (next === 'n') {
+          result += '\n';
+          i += 2;
+        } else {
+          // Unknown escape sequence - pass through literal backslash
+          result += str[i];
+          i += 1;
+        }
       } else {
-        // Unknown escape sequence - treat backslash literally
-        result += str[i];
+        // Dangling backslash at end - strip it per spec
         i += 1;
       }
     } else {
@@ -79,6 +84,11 @@ function parse(text) {
   const rows = trimmed.split('\n\n');
 
   return rows.map(row => {
+    // Empty string means empty row (no cells)
+    if (row === '') {
+      return [];
+    }
+
     // Split by single newlines to get cells
     const cells = row.split('\n');
     return cells.map(unescape);

@@ -1,6 +1,6 @@
 {
   "name": "@nsv-format/nsv",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Modern, ergonomic JavaScript library for NSV (Newline-Separated Values) format - a simpler, git-friendly alternative to CSV",
   "main": "index.js",
   "types": "index.d.ts",
