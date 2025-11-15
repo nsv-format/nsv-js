@@ -231,11 +231,12 @@ node cross-test-rust.js
 
 ## Compatibility
 
-This implementation has been cross-tested against:
-- [nsv-python](https://pypi.org/project/nsv/) (PyPI) - 100% compatible
-- [nsv-rust](https://crates.io/crates/nsv) (crates.io) - 100% compatible
+This implementation has been cross-tested against reference implementations:
+- **nsv-python** ([GitHub](https://github.com/nsv-format/nsv-python) latest) - 100% compatible
+  - Note: PyPI version 0.2.0 has a known escaping bug (wrong `.replace()` order). Use GitHub version for accurate behavior.
+- **nsv-rust** ([crates.io](https://crates.io/crates/nsv)) - 100% compatible
 
-All implementations pass the same test suite, ensuring semantic compatibility across languages.
+All implementations pass the same comprehensive test suite when using correct versions.
 
 ## Usage Examples
 

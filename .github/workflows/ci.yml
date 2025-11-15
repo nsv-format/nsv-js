@@ -30,7 +30,7 @@ jobs:
       run: node test-spec.js
 
   cross-test-python:
-    name: Cross-test vs Python (PyPI)
+    name: Cross-test vs Python (GitHub latest)
     runs-on: ubuntu-latest
 
     steps:
@@ -46,8 +46,8 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install Python NSV from PyPI
-      run: pip install nsv
+    - name: Install Python NSV from GitHub (latest)
+      run: pip install git+https://github.com/nsv-format/nsv-python.git
 
     - name: Run cross-tests against Python
       run: node cross-test-python.js
@@ -66,9 +66,6 @@ jobs:
 
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
-
-    - name: Install NSV from crates.io
-      run: cargo install nsv
 
     - name: Run cross-tests against Rust
       run: node cross-test-rust.js
