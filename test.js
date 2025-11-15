@@ -93,7 +93,7 @@ async function runTests() {
   {
     const input = [['a', 'b'], ['c', 'd']];
     const result = nsv.stringify(input);
-    assertEqual(result, 'a\nb\n\nc\nd\n', 'Stringify basic');
+    assertEqual(result, 'a\nb\n\nc\nd\n\n', 'Stringify basic');
     console.log('✓ Stringify basic');
   }
 
@@ -101,7 +101,7 @@ async function runTests() {
   {
     const input = [['a', ''], ['b', 'c']];
     const result = nsv.stringify(input);
-    assertEqual(result, 'a\n\\\n\nb\nc\n', 'Stringify with empty cells');
+    assertEqual(result, 'a\n\\\n\nb\nc\n\n', 'Stringify with empty cells');
     console.log('✓ Stringify with empty cells');
   }
 
@@ -109,7 +109,7 @@ async function runTests() {
   {
     const input = [['a\\b', 'c\nd']];
     const result = nsv.stringify(input);
-    assertEqual(result, 'a\\\\b\nc\\nd\n', 'Stringify with special characters');
+    assertEqual(result, 'a\\\\b\nc\\nd\n\n', 'Stringify with special characters');
     console.log('✓ Stringify with special characters');
   }
 
@@ -129,7 +129,7 @@ async function runTests() {
 
   // Test 12: loads alias
   {
-    const input = 'a\nb\n';
+    const input = 'a\nb\n\n';
     const result = nsv.loads(input);
     assertEqual(result, [['a', 'b']], 'loads alias');
     console.log('✓ loads alias');
@@ -139,7 +139,7 @@ async function runTests() {
   {
     const input = [['a', 'b']];
     const result = nsv.dumps(input);
-    assertEqual(result, 'a\nb\n', 'dumps alias');
+    assertEqual(result, 'a\nb\n\n', 'dumps alias');
     console.log('✓ dumps alias');
   }
 
@@ -153,7 +153,7 @@ async function runTests() {
 
   // Test 15: load from string
   {
-    const result = await nsv.load('a\nb\n');
+    const result = await nsv.load('a\nb\n\n');
     assertEqual(result, [['a', 'b']], 'load from string');
     console.log('✓ load from string');
   }
@@ -163,7 +163,7 @@ async function runTests() {
     const stream = createWritableStream();
     await nsv.dump([['a', 'b'], ['c', 'd']], stream);
     const result = stream.getData();
-    assertEqual(result, 'a\nb\n\nc\nd\n', 'dump to stream');
+    assertEqual(result, 'a\nb\n\nc\nd\n\n', 'dump to stream');
     console.log('✓ dump to stream');
   }
 
@@ -173,7 +173,7 @@ async function runTests() {
     const writer = new nsv.Writer(stream);
     await writer.writeRow(['a', 'b']);
     const result = stream.getData();
-    assertEqual(result, 'a\nb\n', 'Writer - single row');
+    assertEqual(result, 'a\nb\n\n', 'Writer - single row');
     console.log('✓ Writer - single row');
   }
 
@@ -184,7 +184,7 @@ async function runTests() {
     await writer.writeRow(['a', 'b']);
     await writer.writeRow(['c', 'd']);
     const result = stream.getData();
-    assertEqual(result, 'a\nb\n\nc\nd\n', 'Writer - multiple rows');
+    assertEqual(result, 'a\nb\n\nc\nd\n\n', 'Writer - multiple rows');
     console.log('✓ Writer - multiple rows');
   }
 
@@ -194,7 +194,7 @@ async function runTests() {
     const writer = new nsv.Writer(stream);
     await writer.writeRows([['a', 'b'], ['c', 'd']]);
     const result = stream.getData();
-    assertEqual(result, 'a\nb\n\nc\nd\n', 'Writer - writeRows');
+    assertEqual(result, 'a\nb\n\nc\nd\n\n', 'Writer - writeRows');
     console.log('✓ Writer - writeRows');
   }
 
@@ -288,21 +288,24 @@ async function runTests() {
   // Test 29: Multiple empty rows
   {
     const result = nsv.stringify([[], []]);
-    assertEqual(result, '\n\n\n', 'Multiple empty rows');
+    assertEqual(result, '\n\n', 'Multiple empty rows');
     console.log('✓ Multiple empty rows');
   }
 
-  // Test 30: Trailing newlines handled correctly
+  // Test 30: Trailing newlines behavior
   {
-    const input1 = 'a\nb\n';
+    const input1 = 'a\nb\n\n';
     const input2 = 'a\nb\n\n';
     const input3 = 'a\nb\n\n\n';
     const result1 = nsv.parse(input1);
     const result2 = nsv.parse(input2);
     const result3 = nsv.parse(input3);
+    // Single trailing newline completes the row
     assertEqual(result1, [['a', 'b']], 'Trailing newlines - single');
+    // Double trailing newline - second newline is consumed as row terminator
     assertEqual(result2, [['a', 'b']], 'Trailing newlines - double');
-    assertEqual(result3, [['a', 'b']], 'Trailing newlines - triple');
+    // Triple trailing newline - third newline indicates an empty row
+    assertEqual(result3, [['a', 'b'], []], 'Trailing newlines - triple');
     console.log('✓ Trailing newlines handled correctly');
   }
 

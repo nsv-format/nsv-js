@@ -73,26 +73,36 @@ function parse(text) {
     return [];
   }
 
-  // Remove trailing newlines for consistent parsing
-  const trimmed = text.replace(/\n+$/, '');
+  // Use same algorithm as Python/Scala/Rust implementations
+  const data = [];
+  let row = [];
+  let start = 0;
 
-  if (trimmed === '') {
-    return [];
+  for (let pos = 0; pos < text.length; pos++) {
+    if (text[pos] === '\n') {
+      if (pos - start >= 1) {
+        // There's content before this newline - it's a cell
+        row.push(unescape(text.substring(start, pos)));
+      } else {
+        // Empty line - row is complete
+        data.push(row);
+        row = [];
+      }
+      start = pos + 1;
+    }
   }
 
-  // Split by double newlines to get rows
-  const rows = trimmed.split('\n\n');
+  // Handle any remaining content after the last newline (shouldn't happen in valid NSV)
+  if (start < text.length) {
+    row.push(unescape(text.substring(start)));
+  }
 
-  return rows.map(row => {
-    // Empty string means empty row (no cells)
-    if (row === '') {
-      return [];
-    }
+  // Append final row if it has content
+  if (row.length > 0) {
+    data.push(row);
+  }
 
-    // Split by single newlines to get cells
-    const cells = row.split('\n');
-    return cells.map(unescape);
-  });
+  return data;
 }
 
 /**
@@ -105,22 +115,27 @@ function stringify(data) {
     throw new TypeError('Data must be an array');
   }
 
-  return data
-    .map(row => {
-      if (!Array.isArray(row)) {
-        throw new TypeError('Each row must be an array');
-      }
+  // Use same algorithm as Python/Scala/Rust: build lines array
+  const lines = [];
 
-      return row
-        .map(cell => {
-          if (typeof cell !== 'string') {
-            throw new TypeError('Each cell must be a string');
-          }
-          return escape(cell);
-        })
-        .join('\n');
-    })
-    .join('\n\n') + (data.length > 0 ? '\n' : '');
+  for (const row of data) {
+    if (!Array.isArray(row)) {
+      throw new TypeError('Each row must be an array');
+    }
+
+    for (const cell of row) {
+      if (typeof cell !== 'string') {
+        throw new TypeError('Each cell must be a string');
+      }
+      lines.push(escape(cell));
+    }
+
+    // Empty string represents row terminator
+    lines.push('');
+  }
+
+  // Join all lines with newline
+  return lines.map(line => line + '\n').join('');
 }
 
 /**
@@ -195,22 +210,20 @@ class Writer {
       throw new TypeError('Row must be an array');
     }
 
-    const escapedCells = row.map(cell => {
+    // Write each cell followed by newline
+    for (const cell of row) {
       if (typeof cell !== 'string') {
         throw new TypeError('Each cell must be a string');
       }
-      return escape(cell);
-    });
+      this.stream.write(escape(cell) + '\n');
+    }
 
-    const rowText = escapedCells.join('\n');
-    const textToWrite = this.firstRow ? rowText + '\n' : '\n' + rowText + '\n';
-
+    // Write row terminator (empty line)
     return new Promise((resolve, reject) => {
-      this.stream.write(textToWrite, 'utf8', (error) => {
+      this.stream.write('\n', 'utf8', (error) => {
         if (error) {
           reject(error);
         } else {
-          this.firstRow = false;
           resolve();
         }
       });

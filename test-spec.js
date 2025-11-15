@@ -78,7 +78,8 @@ Not a newline: \\\\n
 {
   const input = '\n\na\n\n\n';
   const result = nsv.parse(input);
-  assert.deepStrictEqual(result, [[], ['a']]);
+  // \n\n = first empty row, a\n = cell, \n\n = complete row and start second empty row, \n = third empty row
+  assert.deepStrictEqual(result, [[], [], ['a'], []]);
   console.log('✓ Empty rows');
 }
 
@@ -150,7 +151,7 @@ Not a newline: \\\\n
   console.log('✓ Structure preservation for various row types');
 }
 
-// Test that trailing newlines don't create extra rows
+// Test that trailing newlines behavior matches Python
 {
   const input1 = 'a\n';
   const input2 = 'a\n\n';
@@ -159,8 +160,8 @@ Not a newline: \\\\n
 
   assert.deepStrictEqual(nsv.parse(input1), [['a']]);
   assert.deepStrictEqual(nsv.parse(input2), [['a']]);
-  assert.deepStrictEqual(nsv.parse(input3), [['a']]);
-  assert.deepStrictEqual(nsv.parse(input4), [['a']]);
+  assert.deepStrictEqual(nsv.parse(input3), [['a'], []]);
+  assert.deepStrictEqual(nsv.parse(input4), [['a'], [], []]);
   console.log('✓ Trailing newlines are handled correctly');
 }
 
