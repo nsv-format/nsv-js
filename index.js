@@ -92,7 +92,7 @@ function parse(text) {
     }
   }
 
-  // Handle any remaining content after the last newline (shouldn't happen in valid NSV)
+  // Handle any remaining content after the last newline
   if (start < text.length) {
     row.push(unescape(text.substring(start)));
   }
@@ -197,7 +197,6 @@ class Writer {
    */
   constructor(stream) {
     this.stream = stream;
-    this.firstRow = true;
   }
 
   /**
@@ -244,6 +243,7 @@ class Writer {
 
 /**
  * Create a reader for incrementally reading NSV rows
+ * Truly streams data - parses rows as chunks arrive without buffering entire input
  */
 class Reader {
   /**
@@ -251,18 +251,94 @@ class Reader {
    */
   constructor(input) {
     this.input = input;
-    this._data = null;
-    this._index = 0;
+    this._buffer = '';
+    this._currentRow = [];
+    this._rowQueue = [];
+    this._done = false;
+    this._started = false;
+    this._error = null;
+    this._lastCharWasNewline = false;
   }
 
   /**
-   * Load data if not already loaded
+   * Start streaming if not already started
    * @private
    */
-  async _ensureLoaded() {
-    if (this._data === null) {
-      this._data = await load(this.input);
+  _start() {
+    if (this._started) return;
+    this._started = true;
+
+    // If input is a string, process it directly
+    if (typeof this.input === 'string') {
+      this._processChunk(this.input);
+      this._finalize();
+      return;
     }
+
+    // Otherwise set up stream handlers
+    this.input.on('data', (chunk) => {
+      try {
+        const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+        this._processChunk(text);
+      } catch (error) {
+        this._error = error;
+      }
+    });
+
+    this.input.on('end', () => {
+      this._finalize();
+    });
+
+    this.input.on('error', (error) => {
+      this._error = error;
+    });
+  }
+
+  /**
+   * Process a chunk of text, extracting complete rows
+   * @private
+   */
+  _processChunk(text) {
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+
+      if (char === '\n') {
+        if (this._lastCharWasNewline) {
+          // Double newline - row complete
+          this._rowQueue.push(this._currentRow);
+          this._currentRow = [];
+          this._buffer = '';
+          this._lastCharWasNewline = false;
+        } else {
+          // Single newline - cell complete
+          this._currentRow.push(unescape(this._buffer));
+          this._buffer = '';
+          this._lastCharWasNewline = true;
+        }
+      } else {
+        // Regular character
+        this._buffer += char;
+        this._lastCharWasNewline = false;
+      }
+    }
+  }
+
+  /**
+   * Finalize parsing when stream ends
+   * @private
+   */
+  _finalize() {
+    // Handle any remaining buffered content
+    if (this._buffer.length > 0) {
+      this._currentRow.push(unescape(this._buffer));
+    }
+
+    // Add final row if it has content
+    if (this._currentRow.length > 0) {
+      this._rowQueue.push(this._currentRow);
+    }
+
+    this._done = true;
   }
 
   /**
@@ -270,13 +346,22 @@ class Reader {
    * @returns {Promise<string[]|null>} Next row or null if no more rows
    */
   async readRow() {
-    await this._ensureLoaded();
+    this._start();
 
-    if (this._index >= this._data.length) {
-      return null;
+    // Wait for a row to be available or stream to finish
+    while (this._rowQueue.length === 0 && !this._done) {
+      if (this._error) throw this._error;
+      // Wait a tick for more data
+      await new Promise(resolve => setImmediate(resolve));
     }
 
-    return this._data[this._index++];
+    if (this._error) throw this._error;
+
+    if (this._rowQueue.length > 0) {
+      return this._rowQueue.shift();
+    }
+
+    return null;
   }
 
   /**
@@ -284,21 +369,25 @@ class Reader {
    * @returns {Promise<string[][]>} All remaining rows
    */
   async readRows() {
-    await this._ensureLoaded();
+    this._start();
 
-    const result = this._data.slice(this._index);
-    this._index = this._data.length;
-    return result;
+    const rows = [];
+    let row;
+    while ((row = await this.readRow()) !== null) {
+      rows.push(row);
+    }
+    return rows;
   }
 
   /**
    * Async iterator support
    */
   async *[Symbol.asyncIterator]() {
-    await this._ensureLoaded();
+    this._start();
 
-    while (this._index < this._data.length) {
-      yield this._data[this._index++];
+    let row;
+    while ((row = await this.readRow()) !== null) {
+      yield row;
     }
   }
 }
