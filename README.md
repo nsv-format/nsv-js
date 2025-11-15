@@ -232,11 +232,10 @@ node cross-test-rust.js
 ## Compatibility
 
 This implementation has been cross-tested against reference implementations:
-- **nsv-python** ([GitHub](https://github.com/nsv-format/nsv-python) latest) - 100% compatible
-  - Note: PyPI version 0.2.0 has a known escaping bug (wrong `.replace()` order). Use GitHub version for accurate behavior.
+- **nsv-python** ([PyPI](https://pypi.org/project/nsv/) v0.2.1+, [GitHub](https://github.com/nsv-format/nsv-python)) - 100% compatible
 - **nsv-rust** ([crates.io](https://crates.io/crates/nsv)) - 100% compatible
 
-All implementations pass the same comprehensive test suite when using correct versions.
+All implementations pass the same comprehensive test suite.
 
 ## Usage Examples
 

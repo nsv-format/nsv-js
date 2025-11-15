@@ -30,7 +30,7 @@ jobs:
       run: node test-spec.js
 
   cross-test-python:
-    name: Cross-test vs Python (GitHub latest)
+    name: Cross-test vs Python (PyPI 0.2.1)
     runs-on: ubuntu-latest
 
     steps:
@@ -46,8 +46,8 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Install Python NSV from GitHub (latest)
-      run: pip install git+https://github.com/nsv-format/nsv-python.git
+    - name: Install Python NSV 0.2.1
+      run: pip install nsv==0.2.1
 
     - name: Run cross-tests against Python
       run: node cross-test-python.js
