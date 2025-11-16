@@ -35,7 +35,6 @@ const text = nsv.stringify([['name', 'email'], ['Alice', 'alice@example.com']]);
 // => 'name\nemail\n\nAlice\nalice@example.com\n'
 ```
 
-Aliases: `loads` for `parse`, `dumps` for `stringify`.
 
 ## Streaming
 
@@ -56,8 +55,8 @@ for await (const row of reader) {
 The `Reader` parses incrementally as data arrives—it handles infinite streams and maintains bounded memory usage.
 
 **Stream API:**
-- `load(stream)` - read entire stream into memory as array
-- `dump(data, stream)` - write entire array to stream
+- `read(stream)` - read entire stream into memory as array
+- `write(data, stream)` - write entire array to stream
 - `reader.readRow()` - read next row (returns `null` when done)
 - `reader.readRows()` - read all remaining rows into array
 - `writer.writeRow(row)` - write a single row

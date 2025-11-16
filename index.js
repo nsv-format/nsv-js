@@ -132,7 +132,7 @@ function stringify(data) {
  * @param {NodeJS.ReadableStream|string} input - Stream or string to parse
  * @returns {Promise<string[][]>} Promise resolving to parsed data
  */
-async function load(input) {
+async function read(input) {
   if (typeof input === 'string') {
     return parse(input);
   }
@@ -163,7 +163,7 @@ async function load(input) {
  * @param {NodeJS.WritableStream} output - Stream to write to
  * @returns {Promise<void>} Promise that resolves when writing is complete
  */
-async function dump(data, output) {
+async function write(data, output) {
   const text = stringify(data);
 
   return new Promise((resolve, reject) => {
@@ -378,12 +378,8 @@ class Reader {
 module.exports = {
   parse,
   stringify,
-  load,
-  dump,
+  read,
+  write,
   Writer,
   Reader,
-
-  // Convenience aliases
-  loads: parse,
-  dumps: stringify,
 };

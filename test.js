@@ -127,44 +127,28 @@ async function runTests() {
     console.log('✓ Round-trip parse/stringify');
   }
 
-  // Test 12: loads alias
-  {
-    const input = 'a\nb\n\n';
-    const result = nsv.loads(input);
-    assertEqual(result, [['a', 'b']], 'loads alias');
-    console.log('✓ loads alias');
-  }
-
-  // Test 13: dumps alias
-  {
-    const input = [['a', 'b']];
-    const result = nsv.dumps(input);
-    assertEqual(result, 'a\nb\n\n', 'dumps alias');
-    console.log('✓ dumps alias');
-  }
-
-  // Test 14: load from stream
+  // Test 12: read from stream
   {
     const stream = createReadableStream('a\nb\n\nc\nd\n');
-    const result = await nsv.load(stream);
-    assertEqual(result, [['a', 'b'], ['c', 'd']], 'load from stream');
-    console.log('✓ load from stream');
+    const result = await nsv.read(stream);
+    assertEqual(result, [['a', 'b'], ['c', 'd']], 'read from stream');
+    console.log('✓ read from stream');
   }
 
-  // Test 15: load from string
+  // Test 13: read from string
   {
-    const result = await nsv.load('a\nb\n\n');
-    assertEqual(result, [['a', 'b']], 'load from string');
-    console.log('✓ load from string');
+    const result = await nsv.read('a\nb\n\n');
+    assertEqual(result, [['a', 'b']], 'read from string');
+    console.log('✓ read from string');
   }
 
-  // Test 16: dump to stream
+  // Test 14: write to stream
   {
     const stream = createWritableStream();
-    await nsv.dump([['a', 'b'], ['c', 'd']], stream);
+    await nsv.write([['a', 'b'], ['c', 'd']], stream);
     const result = stream.getData();
-    assertEqual(result, 'a\nb\n\nc\nd\n\n', 'dump to stream');
-    console.log('✓ dump to stream');
+    assertEqual(result, 'a\nb\n\nc\nd\n\n', 'write to stream');
+    console.log('✓ write to stream');
   }
 
   // Test 17: Writer - single row

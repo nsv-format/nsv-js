@@ -21,7 +21,7 @@ export function stringify(data: string[][]): string;
  * @param input - Stream or string to parse
  * @returns Promise resolving to parsed data
  */
-export function load(input: Readable | string): Promise<string[][]>;
+export function read(input: Readable | string): Promise<string[][]>;
 
 /**
  * Serialize data to NSV and write to stream
@@ -29,7 +29,7 @@ export function load(input: Readable | string): Promise<string[][]>;
  * @param output - Stream to write to
  * @returns Promise that resolves when writing is complete
  */
-export function dump(data: string[][], output: Writable): Promise<void>;
+export function write(data: string[][], output: Writable): Promise<void>;
 
 /**
  * Writer for incrementally writing NSV rows
@@ -73,13 +73,3 @@ export class Reader {
    */
   [Symbol.asyncIterator](): AsyncIterableIterator<string[]>;
 }
-
-/**
- * Alias for parse()
- */
-export const loads: typeof parse;
-
-/**
- * Alias for stringify()
- */
-export const dumps: typeof stringify;
