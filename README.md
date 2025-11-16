@@ -2,9 +2,9 @@
 
 [![CI](https://github.com/nsv-format/nsv-js/workflows/CI/badge.svg)](https://github.com/nsv-format/nsv-js/actions)
 
-NSV is a plain text format for sequences of sequences. It uses newlines as delimiters: single newlines separate elements within a sequence, double newlines separate the sequences themselves.
+NSV is a plain text format for sequences of sequences.
 
-```
+```nsv
 name
 email
 
@@ -14,8 +14,6 @@ alice@example.com
 Bob
 bob@example.com
 ```
-
-The format is git-friendly (clean diffs) and simple (no quoting complexity).
 
 ## Install
 
@@ -39,42 +37,9 @@ const text = nsv.stringify([['name', 'email'], ['Alice', 'alice@example.com']]);
 
 Aliases: `loads` for `parse`, `dumps` for `stringify`.
 
-## Escaping
-
-NSV has three escape sequences:
-- `\\` represents a literal backslash
-- `\n` represents a newline within an element
-- `\` alone represents an empty element
-
-Example:
-
-```javascript
-const data = [
-  ['Name', 'Address'],
-  ['Alice', '123 Main St'],
-  ['Bob', '456 Oak Ave\nApt 2'],  // Address with newline
-  ['Charlie', '']                  // Empty address
-];
-
-nsv.stringify(data);
-// =>
-// Name
-// Address
-//
-// Alice
-// 123 Main St
-//
-// Bob
-// 456 Oak Ave\nApt 2
-//
-// Charlie
-// \
-//
-```
-
 ## Streaming
 
-For large files, use `Reader` and `Writer` to process data incrementally without loading everything into memory:
+For large files, one can use `Reader` and `Writer` to process data incrementally without loading everything into memory:
 
 ```javascript
 const fs = require('fs');
@@ -114,8 +79,7 @@ This implementation is tested against:
 - [Python implementation](https://pypi.org/project/nsv/)
 - [Rust implementation](https://crates.io/crates/nsv)
 
-All implementations pass the same test suite.
-
 ## Spec
 
 See [nsv-format/nsv](https://github.com/nsv-format/nsv) for the format specification.
+
