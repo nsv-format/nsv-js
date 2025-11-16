@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/nsv-format/nsv-js/workflows/CI/badge.svg)](https://github.com/nsv-format/nsv-js/actions)
 
-Plain text format for tabular data. Each cell on its own line, double newline separates rows.
+NSV is a plain text format for sequences of sequences. Single newlines separate cells, double newlines separate rows.
 
 ```
 name
@@ -35,11 +35,12 @@ const text = nsv.stringify([['name', 'email'], ['Alice', 'alice@example.com']]);
 // => 'name\nemail\n\nAlice\nalice@example.com\n'
 ```
 
-## Special cases
+## Escaping
 
-- Empty cell: `\` (backslash alone)
-- Newline in cell: `\n` (escaped)
-- Literal backslash: `\\` (doubled)
+Three escape sequences:
+- `\\` → literal backslash
+- `\n` → newline within a cell
+- `\` (alone) → empty cell
 
 ```javascript
 const data = [
@@ -78,7 +79,6 @@ const writer = new nsv.Writer(fs.createWriteStream('output.nsv'));
 
 // Process rows one at a time - bounded memory usage
 for await (const row of reader) {
-  // Transform each row
   const transformed = row.map(cell => cell.toUpperCase());
   await writer.writeRow(transformed);
 }
@@ -86,25 +86,12 @@ for await (const row of reader) {
 
 The `Reader` truly streams - it parses rows as data arrives, not after loading the entire file. Works with infinite streams.
 
-## API
-
-### `parse(text)` / `loads(text)`
-Parse NSV string → 2D array
-
-### `stringify(data)` / `dumps(data)`
-Serialize 2D array → NSV string
-
-### `load(stream)`
-Parse from stream (async) → 2D array
-
-### `dump(data, stream)`
-Serialize to stream (async)
-
-### `Reader(stream)`
-Incremental reading. Methods: `readRow()`, `readRows()`. Supports `for await...of`.
-
-### `Writer(stream)`
-Incremental writing. Methods: `writeRow(row)`, `writeRows(rows)`.
+**Additional functions:**
+- `nsv.load(stream)` - Load entire stream into memory as 2D array
+- `nsv.dump(data, stream)` - Write entire 2D array to stream
+- `reader.readRow()` - Read next row (returns `null` when done)
+- `reader.readRows()` - Read all remaining rows
+- `writer.writeRows(rows)` - Write multiple rows
 
 ## TypeScript
 
@@ -119,13 +106,9 @@ const data: string[][] = nsv.parse(text);
 ## Compatibility
 
 Cross-tested against:
-- [nsv-python](https://pypi.org/project/nsv/) v0.2.1+
+- [nsv-python](https://pypi.org/project/nsv/)
 - [nsv-rust](https://crates.io/crates/nsv)
 
 ## Format spec
 
 See [nsv-format/nsv](https://github.com/nsv-format/nsv)
-
-## License
-
-MIT
