@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/nsv-format/nsv-js/workflows/CI/badge.svg)](https://github.com/nsv-format/nsv-js/actions)
 
-A dead-simple format for tabular data. Each cell on its own line, double newline separates rows.
+Plain text format for tabular data. Each cell on its own line, double newline separates rows.
 
 ```
 name
@@ -14,8 +14,6 @@ alice@example.com
 Bob
 bob@example.com
 ```
-
-That's it. No quotes, no commas, no CSV nonsense.
 
 ## Install
 

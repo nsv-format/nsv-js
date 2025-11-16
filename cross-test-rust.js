@@ -3,6 +3,9 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+// Use NSV_RUST_VERSION env var if set, otherwise default to 0.0.3
+const nsvVersion = process.env.NSV_RUST_VERSION || '0.0.3';
+
 // Test cases
 const tests = [
   { name: 'simple table', input: 'a\nb\n\nc\nd\n' },
@@ -19,7 +22,7 @@ const tests = [
   { name: 'complex example', input: 'first\nrow\n\nsecond\nrow\n\nmissing ->\n\\\n<- missing\n\nRoses are red\\nViolets are blue\\nThis may be pain\\nBut CSV would be, too\nTab\\tseparated\\tvalues\\n(would be left as-is normally)\nNot a newline: \\\\n\n' },
 ];
 
-console.log('Cross-testing JS implementation against Rust (crates.io)\n');
+console.log(`Cross-testing JS implementation against Rust (crates.io ${nsvVersion})\n`);
 console.log('='.repeat(60) + '\n');
 
 let passCount = 0;
@@ -47,7 +50,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-nsv = "0.0.3"
+nsv = "${nsvVersion}"
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 `;

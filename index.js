@@ -111,22 +111,11 @@ function parse(text) {
  * @returns {string} NSV formatted string
  */
 function stringify(data) {
-  if (!Array.isArray(data)) {
-    throw new TypeError('Data must be an array');
-  }
-
   // Use same algorithm as Python/Scala/Rust: build lines array
   const lines = [];
 
   for (const row of data) {
-    if (!Array.isArray(row)) {
-      throw new TypeError('Each row must be an array');
-    }
-
     for (const cell of row) {
-      if (typeof cell !== 'string') {
-        throw new TypeError('Each cell must be a string');
-      }
       lines.push(escape(cell));
     }
 
@@ -205,15 +194,8 @@ class Writer {
    * @returns {Promise<void>}
    */
   async writeRow(row) {
-    if (!Array.isArray(row)) {
-      throw new TypeError('Row must be an array');
-    }
-
     // Write each cell followed by newline
     for (const cell of row) {
-      if (typeof cell !== 'string') {
-        throw new TypeError('Each cell must be a string');
-      }
       this.stream.write(escape(cell) + '\n');
     }
 

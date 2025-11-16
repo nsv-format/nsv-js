@@ -238,40 +238,7 @@ async function runTests() {
     console.log('✓ Reader from stream');
   }
 
-  // Test 24: Error handling - non-array data
-  {
-    try {
-      nsv.stringify('not an array');
-      assert.fail('Should throw TypeError');
-    } catch (error) {
-      assert(error instanceof TypeError, 'Should throw TypeError for non-array data');
-    }
-    console.log('✓ Error handling - non-array data');
-  }
-
-  // Test 25: Error handling - non-array row
-  {
-    try {
-      nsv.stringify([['a', 'b'], 'not an array']);
-      assert.fail('Should throw TypeError');
-    } catch (error) {
-      assert(error instanceof TypeError, 'Should throw TypeError for non-array row');
-    }
-    console.log('✓ Error handling - non-array row');
-  }
-
-  // Test 26: Error handling - non-string cell
-  {
-    try {
-      nsv.stringify([['a', 123]]);
-      assert.fail('Should throw TypeError');
-    } catch (error) {
-      assert(error instanceof TypeError, 'Should throw TypeError for non-string cell');
-    }
-    console.log('✓ Error handling - non-string cell');
-  }
-
-  // Test 27: Empty data array
+  // Test 24: Empty data array
   {
     const result = nsv.stringify([]);
     assertEqual(result, '', 'Empty data array');

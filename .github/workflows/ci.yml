@@ -50,8 +50,11 @@ jobs:
       run: node cross-test-python.js
 
   cross-test-rust:
-    name: Cross-test vs Rust (crates.io)
+    name: Cross-test vs Rust (crates.io 0.0.3)
     runs-on: ubuntu-latest
+
+    env:
+      NSV_RUST_VERSION: "0.0.3"
 
     steps:
     - uses: actions/checkout@v4
@@ -64,5 +67,5 @@ jobs:
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Run cross-tests against Rust
+    - name: Run cross-tests against Rust ${{ env.NSV_RUST_VERSION }}
       run: node cross-test-rust.js
