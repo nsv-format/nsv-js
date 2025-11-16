@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/nsv-format/nsv-js/workflows/CI/badge.svg)](https://github.com/nsv-format/nsv-js/actions)
 
-NSV is a plain text format for sequences of sequences. Single newlines separate cells, double newlines separate rows.
+NSV is a plain text format for sequences of sequences. It uses newlines as delimiters: single newlines separate elements within a sequence, double newlines separate the sequences themselves.
 
 ```
 name
@@ -15,87 +15,92 @@ Bob
 bob@example.com
 ```
 
+The format is git-friendly (clean diffs) and simple (no quoting complexity).
+
 ## Install
 
 ```bash
 npm install @nsv-format/nsv
 ```
 
-## Use
+## Basic usage
 
 ```javascript
 const nsv = require('@nsv-format/nsv');
 
-// Parse
+// Parse NSV text
 const data = nsv.parse('name\nemail\n\nAlice\nalice@example.com\n');
 // => [['name', 'email'], ['Alice', 'alice@example.com']]
 
-// Serialize
+// Serialize to NSV
 const text = nsv.stringify([['name', 'email'], ['Alice', 'alice@example.com']]);
 // => 'name\nemail\n\nAlice\nalice@example.com\n'
 ```
 
+Aliases: `loads` for `parse`, `dumps` for `stringify`.
+
 ## Escaping
 
-Three escape sequences:
-- `\\` → literal backslash
-- `\n` → newline within a cell
-- `\` (alone) → empty cell
+NSV has three escape sequences:
+- `\\` represents a literal backslash
+- `\n` represents a newline within an element
+- `\` alone represents an empty element
+
+Example:
 
 ```javascript
 const data = [
-  ['Name', 'City'],
-  ['Alice', 'New York'],
-  ['Bob', ''],  // Empty city
-  ['Charlie', 'San\nFrancisco']  // Newline in city
+  ['Name', 'Address'],
+  ['Alice', '123 Main St'],
+  ['Bob', '456 Oak Ave\nApt 2'],  // Address with newline
+  ['Charlie', '']                  // Empty address
 ];
 
-const text = nsv.stringify(data);
+nsv.stringify(data);
 // =>
 // Name
-// City
+// Address
 //
 // Alice
-// New York
+// 123 Main St
 //
 // Bob
-// \
+// 456 Oak Ave\nApt 2
 //
 // Charlie
-// San\nFrancisco
+// \
 //
 ```
 
 ## Streaming
 
-Process large files incrementally without loading everything into memory:
+For large files, use `Reader` and `Writer` to process data incrementally without loading everything into memory:
 
 ```javascript
 const fs = require('fs');
-const nsv = require('@nsv-format/nsv');
 
 const reader = new nsv.Reader(fs.createReadStream('input.nsv'));
 const writer = new nsv.Writer(fs.createWriteStream('output.nsv'));
 
-// Process rows one at a time - bounded memory usage
 for await (const row of reader) {
-  const transformed = row.map(cell => cell.toUpperCase());
-  await writer.writeRow(transformed);
+  const processed = row.map(cell => cell.toUpperCase());
+  await writer.writeRow(processed);
 }
 ```
 
-The `Reader` truly streams - it parses rows as data arrives, not after loading the entire file. Works with infinite streams.
+The `Reader` parses incrementally as data arrives—it handles infinite streams and maintains bounded memory usage.
 
-**Additional functions:**
-- `nsv.load(stream)` - Load entire stream into memory as 2D array
-- `nsv.dump(data, stream)` - Write entire 2D array to stream
-- `reader.readRow()` - Read next row (returns `null` when done)
-- `reader.readRows()` - Read all remaining rows
-- `writer.writeRows(rows)` - Write multiple rows
+**Stream API:**
+- `load(stream)` - read entire stream into memory as array
+- `dump(data, stream)` - write entire array to stream
+- `reader.readRow()` - read next row (returns `null` when done)
+- `reader.readRows()` - read all remaining rows into array
+- `writer.writeRow(row)` - write a single row
+- `writer.writeRows(rows)` - write multiple rows
 
 ## TypeScript
 
-Type definitions included.
+Type definitions are included:
 
 ```typescript
 import * as nsv from '@nsv-format/nsv';
@@ -103,12 +108,14 @@ import * as nsv from '@nsv-format/nsv';
 const data: string[][] = nsv.parse(text);
 ```
 
-## Compatibility
+## Cross-tested
 
-Cross-tested against:
-- [nsv-python](https://pypi.org/project/nsv/)
-- [nsv-rust](https://crates.io/crates/nsv)
+This implementation is tested against:
+- [Python implementation](https://pypi.org/project/nsv/)
+- [Rust implementation](https://crates.io/crates/nsv)
 
-## Format spec
+All implementations pass the same test suite.
 
-See [nsv-format/nsv](https://github.com/nsv-format/nsv)
+## Spec
+
+See [nsv-format/nsv](https://github.com/nsv-format/nsv) for the format specification.
