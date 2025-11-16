@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, claude/** ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test-node:
+    name: Node.js Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Run tests
+      run: npm test
+
+  cross-test-python:
+    name: Cross-test vs Python (PyPI 0.2.1)
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Python NSV 0.2.1
+      run: pip install nsv==0.2.1
+
+    - name: Run cross-tests against Python
+      run: node cross-test-python.js
+
+  cross-test-rust:
+    name: Cross-test vs Rust (crates.io 0.0.3)
+    runs-on: ubuntu-latest
+
+    env:
+      NSV_RUST_VERSION: "0.0.3"
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Run cross-tests against Rust ${{ env.NSV_RUST_VERSION }}
+      run: node cross-test-rust.js

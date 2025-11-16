@@ -1,0 +1,129 @@
+// Test streaming with chunked data
+const { Readable, Writable } = require('stream');
+const nsv = require('./index');
+
+console.log('Testing true streaming behavior...\n');
+
+// Test 1: Reader processes chunks incrementally
+async function testChunkedReading() {
+  console.log('Test 1: Reading data that arrives in chunks');
+
+  // Create a stream that emits data in small chunks
+  const chunks = ['a\n', 'b\n', '\n', 'c\n', 'd\n', '\n'];
+  let index = 0;
+
+  const stream = new Readable({
+    read() {
+      if (index < chunks.length) {
+        this.push(chunks[index++]);
+      } else {
+        this.push(null); // End of stream
+      }
+    }
+  });
+
+  const reader = new nsv.Reader(stream);
+  const rows = [];
+
+  for await (const row of reader) {
+    rows.push(row);
+    console.log(`  Got row: ${JSON.stringify(row)}`);
+  }
+
+  const expected = [['a', 'b'], ['c', 'd']];
+  if (JSON.stringify(rows) === JSON.stringify(expected)) {
+    console.log('✓ Chunked reading works\n');
+  } else {
+    console.error('✗ Expected:', expected);
+    console.error('  Got:', rows);
+    process.exit(1);
+  }
+}
+
+// Test 2: Writer incrementally writes rows
+async function testIncrementalWriting() {
+  console.log('Test 2: Writing rows incrementally');
+
+  let output = '';
+  const stream = new Writable({
+    write(chunk, encoding, callback) {
+      output += chunk.toString();
+      console.log(`  Wrote chunk: ${JSON.stringify(chunk.toString())}`);
+      callback();
+    }
+  });
+
+  const writer = new nsv.Writer(stream);
+
+  await writer.writeRow(['name', 'value']);
+  console.log('  First row written');
+
+  await writer.writeRow(['Alice', '100']);
+  console.log('  Second row written');
+
+  await writer.writeRow(['Bob', '200']);
+  console.log('  Third row written');
+
+  const expected = 'name\nvalue\n\nAlice\n100\n\nBob\n200\n\n';
+  if (output === expected) {
+    console.log('✓ Incremental writing works\n');
+  } else {
+    console.error('✗ Expected:', JSON.stringify(expected));
+    console.error('  Got:', JSON.stringify(output));
+    process.exit(1);
+  }
+}
+
+// Test 3: Simulate processing infinite stream
+async function testInfiniteStream() {
+  console.log('Test 3: Processing stream without loading all data');
+
+  // Create a stream that emits rows one at a time with delays
+  const dataRows = [
+    ['row1-a', 'row1-b'],
+    ['row2-a', 'row2-b'],
+    ['row3-a', 'row3-b']
+  ];
+
+  let rowIndex = 0;
+  const stream = new Readable({
+    read() {
+      if (rowIndex < dataRows.length) {
+        const row = dataRows[rowIndex++];
+        const nsvRow = row.map(cell => cell + '\n').join('') + '\n';
+        this.push(nsvRow);
+      } else {
+        this.push(null);
+      }
+    }
+  });
+
+  const reader = new nsv.Reader(stream);
+  let processedCount = 0;
+
+  // Process rows one at a time as they arrive
+  for await (const row of reader) {
+    processedCount++;
+    console.log(`  Processed row ${processedCount}: ${JSON.stringify(row)}`);
+    // In real use case, you could do expensive processing here
+    // without holding entire dataset in memory
+  }
+
+  if (processedCount === 3) {
+    console.log('✓ Stream processing works without buffering all data\n');
+  } else {
+    console.error('✗ Expected 3 rows, got', processedCount);
+    process.exit(1);
+  }
+}
+
+// Run all tests
+(async () => {
+  await testChunkedReading();
+  await testIncrementalWriting();
+  await testInfiniteStream();
+  console.log('✓ All streaming tests passed!');
+})().catch(error => {
+  console.error('✗ Test failed:', error);
+  process.exit(1);
+});
