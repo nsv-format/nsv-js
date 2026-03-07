@@ -260,6 +260,140 @@ async function runTests() {
     console.log('✓ Trailing newlines handled correctly');
   }
 
+  // === spill/unspill tests ===
+
+  // Test: spill empty groups
+  {
+    const result = nsv.spill('|', []);
+    assertEqual(result, [], 'spill - no groups');
+    console.log('✓ spill - no groups');
+  }
+
+  // Test: spill single empty group
+  {
+    const result = nsv.spill('|', [[]]);
+    assertEqual(result, ['|'], 'spill - one empty group');
+    console.log('✓ spill - one empty group');
+  }
+
+  // Test: spill two empty groups
+  {
+    const result = nsv.spill('|', [[], []]);
+    assertEqual(result, ['|', '|'], 'spill - two empty groups');
+    console.log('✓ spill - two empty groups');
+  }
+
+  // Test: spill with data
+  {
+    const result = nsv.spill('|', [['a', 'b'], ['c']]);
+    assertEqual(result, ['a', 'b', '|', 'c', '|'], 'spill - with data');
+    console.log('✓ spill - with data');
+  }
+
+  // Test: spill single element group
+  {
+    const result = nsv.spill('|', [['a']]);
+    assertEqual(result, ['a', '|'], 'spill - single element group');
+    console.log('✓ spill - single element group');
+  }
+
+  // Test: round-trip spill/unspill - no groups
+  // Note: spill(s, []) → [] and unspill(s, []) → [[]], so the round-trip
+  // maps [] to [[]] — this is expected since an empty flat sequence is
+  // indistinguishable from one produced by a single empty group.
+  {
+    const input = [];
+    assertEqual(nsv.unspill('|', nsv.spill('|', input)), [[]], 'round-trip - no groups gives one empty group');
+    console.log('✓ round-trip spill/unspill - no groups');
+  }
+
+  // Test: round-trip spill/unspill - one empty group
+  {
+    const input = [[]];
+    assertEqual(nsv.unspill('|', nsv.spill('|', input)), input, 'round-trip - one empty group');
+    console.log('✓ round-trip spill/unspill - one empty group');
+  }
+
+  // Test: round-trip spill/unspill - two empty groups
+  {
+    const input = [[], []];
+    assertEqual(nsv.unspill('|', nsv.spill('|', input)), input, 'round-trip - two empty groups');
+    console.log('✓ round-trip spill/unspill - two empty groups');
+  }
+
+  // Test: round-trip spill/unspill - with data
+  {
+    const input = [['a', 'b'], ['c']];
+    assertEqual(nsv.unspill('|', nsv.spill('|', input)), input, 'round-trip - with data');
+    console.log('✓ round-trip spill/unspill - with data');
+  }
+
+  // Test: round-trip spill/unspill - single element
+  {
+    const input = [['a']];
+    assertEqual(nsv.unspill('|', nsv.spill('|', input)), input, 'round-trip - single element');
+    console.log('✓ round-trip spill/unspill - single element');
+  }
+
+  // Test: unspill empty sequence
+  {
+    const result = nsv.unspill('|', []);
+    assertEqual(result, [[]], 'unspill - empty sequence gives one empty group');
+    console.log('✓ unspill - empty sequence');
+  }
+
+  // Test: spill with empty string sentinel (NSV inner spill)
+  {
+    const result = nsv.spill('', [['a', 'b'], ['c']]);
+    assertEqual(result, ['a', 'b', '', 'c', ''], 'spill - empty string sentinel');
+    console.log('✓ spill - empty string sentinel');
+  }
+
+  // Test: unspill with empty string sentinel
+  {
+    const result = nsv.unspill('', ['a', 'b', '', 'c', '']);
+    assertEqual(result, [['a', 'b'], ['c']], 'unspill - empty string sentinel');
+    console.log('✓ unspill - empty string sentinel');
+  }
+
+  // === Algebraic equivalence tests ===
+  // encode = spill[Char, '\n'] ∘ spill[String, ''] ∘ map(map(escape))
+  // decode = map(map(unescape)) ∘ unspill[String, ''] ∘ unspill[Char, '\n']
+
+  {
+    const testCases = [
+      { name: 'empty', data: [] },
+      { name: 'single empty row', data: [[]] },
+      { name: 'multiple empty rows', data: [[], [], []] },
+      { name: 'simple data', data: [['a', 'b'], ['c', 'd']] },
+      { name: 'cells with newlines', data: [['line1\nline2', 'hello']] },
+      { name: 'cells with backslash', data: [['a\\b', 'c']] },
+      { name: 'cells with both', data: [['a\nb\\c', 'd\ne']] },
+      { name: 'empty cells', data: [['', 'a'], ['', '']] },
+      { name: 'mixed empty and data rows', data: [[], ['a'], [], ['b', 'c'], []] },
+    ];
+
+    for (const { name, data } of testCases) {
+      // Test encoding equivalence: stringify === spill decomposition
+      const direct = nsv.stringify(data);
+      const viaSpill = nsv.spill('\n', nsv.spill('', data.map(row => row.map(nsv.escape)))).join('');
+      assertEqual(direct, viaSpill, `algebraic encode - ${name}`);
+
+      // Test decoding equivalence: parse === unspill decomposition
+      // decode = map(map(unescape)) ∘ unspill[String, ''] ∘ unspill[Char, '\n']
+      // Between char-level and string-level unspill, we join char groups into strings.
+      if (direct.length > 0) {
+        const directParse = nsv.parse(direct);
+        const charGroups = nsv.unspill('\n', [...direct]);
+        const strings = charGroups.map(g => g.join(''));
+        const rows = nsv.unspill('', strings);
+        const viaUnspill = rows.map(row => row.map(nsv.unescape));
+        assertEqual(directParse, viaUnspill, `algebraic decode - ${name}`);
+      }
+    }
+    console.log('✓ algebraic equivalence (encode and decode) for all test cases');
+  }
+
   console.log('\n✓ All tests passed!');
 }
 
