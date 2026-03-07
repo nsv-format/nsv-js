@@ -14,9 +14,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nsv-format/nsv-js"
+    "url": "git+https://github.com/nsv-format/nsv-js.git"
   },
-  "keywords": ["nsv", "csv", "data", "format", "parser"],
+  "keywords": [
+    "nsv",
+    "csv",
+    "data",
+    "format",
+    "parser"
+  ],
   "author": "naming",
   "license": "MIT",
   "homepage": "https://nsv-format.org",
