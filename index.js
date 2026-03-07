@@ -374,12 +374,66 @@ class Reader {
   }
 }
 
+/**
+ * Flatten groups into a sequence with sentinel terminators.
+ *
+ * spill('', [['a', 'b'], ['c']]) → ['a', 'b', '', 'c', '']
+ * spill('\n', ['abc', 'de'])     → [...'abc', '\n', ...'de', '\n']
+ *
+ * @template T
+ * @param {T} sentinel - The sentinel value to use as terminator
+ * @param {T[][]} groups - The groups to flatten
+ * @returns {T[]} The flattened sequence with sentinel terminators
+ */
+function spill(sentinel, groups) {
+  const result = [];
+  for (const group of groups) {
+    for (const element of group) {
+      result.push(element);
+    }
+    result.push(sentinel);
+  }
+  return result;
+}
+
+/**
+ * Split a sequence on a sentinel into groups (inverse of spill).
+ *
+ * unspill('', ['a', 'b', '', 'c', '']) → [['a', 'b'], ['c']]
+ *
+ * @template T
+ * @param {T} sentinel - The sentinel value to split on
+ * @param {T[]} sequence - The flat sequence to split
+ * @returns {T[][]} The recovered groups
+ */
+function unspill(sentinel, sequence) {
+  const groups = [];
+  let current = [];
+  for (const element of sequence) {
+    if (element === sentinel) {
+      groups.push(current);
+      current = [];
+    } else {
+      current.push(element);
+    }
+  }
+  // Any remaining elements form an unterminated group
+  if (current.length > 0 || groups.length === 0) {
+    groups.push(current);
+  }
+  return groups;
+}
+
 // Export API
 module.exports = {
   parse,
   stringify,
+  escape,
+  unescape,
   read,
   write,
   Writer,
   Reader,
+  spill,
+  unspill,
 };

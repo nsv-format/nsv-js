@@ -62,6 +62,25 @@ The `Reader` parses incrementally as data arrives—it handles infinite streams 
 - `writer.writeRow(row)` - write a single row
 - `writer.writeRows(rows)` - write multiple rows
 
+## Spill/unspill
+
+Flatten/recover seqseq dimension with terminators.
+
+```javascript
+const flat = nsv.spill('', [['a', 'b'], ['c']]);
+// => ['a', 'b', '', 'c', '']
+
+const structured = nsv.unspill('', flat);
+// => [['a', 'b'], ['c']]
+```
+
+Generic — works with any sentinel type. These decompose the encode/decode pipeline:
+
+```
+encode = spill('\n') ∘ spill('') ∘ map(map(escape))
+decode = map(map(unescape)) ∘ unspill('') ∘ unspill('\n')
+```
+
 ## TypeScript
 
 Type definitions are included:

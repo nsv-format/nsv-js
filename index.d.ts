@@ -3,6 +3,36 @@
 import { Readable, Writable } from 'stream';
 
 /**
+ * Escape string for NSV encoding
+ * @param str - The string to escape
+ * @returns The escaped string
+ */
+export function escape(str: string): string;
+
+/**
+ * Unescape NSV-encoded string
+ * @param str - The escaped string
+ * @returns The unescaped string
+ */
+export function unescape(str: string): string;
+
+/**
+ * Flatten groups into a sequence with sentinel terminators.
+ * @param sentinel - The sentinel value to use as terminator
+ * @param groups - The groups to flatten
+ * @returns The flattened sequence with sentinel terminators
+ */
+export function spill<T>(sentinel: T, groups: T[][]): T[];
+
+/**
+ * Split a sequence on a sentinel into groups (inverse of spill).
+ * @param sentinel - The sentinel value to split on
+ * @param sequence - The flat sequence to split
+ * @returns The recovered groups
+ */
+export function unspill<T>(sentinel: T, sequence: T[]): T[][];
+
+/**
  * Parse NSV string into array of arrays
  * @param text - NSV formatted string
  * @returns Array of rows, each row is an array of cells
