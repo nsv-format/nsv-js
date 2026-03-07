@@ -1,6 +1,6 @@
 {
   "name": "@nsv-format/nsv",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "NSV (Newline-Separated Values) format parser",
   "main": "index.js",
   "types": "index.d.ts",
