@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Use NSV_RUST_VERSION env var if set, otherwise default to 0.0.3
-const nsvVersion = process.env.NSV_RUST_VERSION || '0.0.3';
+const nsvVersion = process.env.NSV_RUST_VERSION || '0.0.9';
 
 // Test cases
 const tests = [
@@ -36,7 +36,7 @@ fn main() {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input).unwrap();
 
-    let result = nsv::loads(&input);
+    let result = nsv::decode(&input);
 
     // Output as JSON for comparison
     println!("{}", serde_json::to_string(&result).unwrap());
