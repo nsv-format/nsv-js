@@ -397,9 +397,12 @@ function spill(sentinel, groups) {
 }
 
 /**
- * Split a sequence on a sentinel into groups (inverse of spill).
+ * Split a sequence on a sentinel into groups (left inverse of spill).
  *
  * unspill('', ['a', 'b', '', 'c', '']) → [['a', 'b'], ['c']]
+ *
+ * Strict: trailing elements not terminated by a sentinel are dropped,
+ * and an empty sequence yields no groups.
  *
  * @template T
  * @param {T} sentinel - The sentinel value to split on
@@ -417,10 +420,7 @@ function unspill(sentinel, sequence) {
       current.push(element);
     }
   }
-  // Any remaining elements form an unterminated group
-  if (current.length > 0 || groups.length === 0) {
-    groups.push(current);
-  }
+  // Strict: don't append incomplete trailing groups
   return groups;
 }
 

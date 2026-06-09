@@ -25,7 +25,9 @@ export function unescape(str: string): string;
 export function spill<T>(sentinel: T, groups: T[][]): T[];
 
 /**
- * Split a sequence on a sentinel into groups (inverse of spill).
+ * Split a sequence on a sentinel into groups (left inverse of spill).
+ * Strict: trailing elements not terminated by a sentinel are dropped,
+ * and an empty sequence yields no groups.
  * @param sentinel - The sentinel value to split on
  * @param sequence - The flat sequence to split
  * @returns The recovered groups

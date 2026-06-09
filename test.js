@@ -298,12 +298,9 @@ async function runTests() {
   }
 
   // Test: round-trip spill/unspill - no groups
-  // Note: spill(s, []) → [] and unspill(s, []) → [[]], so the round-trip
-  // maps [] to [[]] — this is expected since an empty flat sequence is
-  // indistinguishable from one produced by a single empty group.
   {
     const input = [];
-    assertEqual(nsv.unspill('|', nsv.spill('|', input)), [[]], 'round-trip - no groups gives one empty group');
+    assertEqual(nsv.unspill('|', nsv.spill('|', input)), input, 'round-trip - no groups');
     console.log('✓ round-trip spill/unspill - no groups');
   }
 
@@ -338,8 +335,15 @@ async function runTests() {
   // Test: unspill empty sequence
   {
     const result = nsv.unspill('|', []);
-    assertEqual(result, [[]], 'unspill - empty sequence gives one empty group');
+    assertEqual(result, [], 'unspill - empty sequence gives no groups');
     console.log('✓ unspill - empty sequence');
+  }
+
+  // Test: unspill discards incomplete trailing group
+  {
+    const result = nsv.unspill('|', ['a', 'b']);
+    assertEqual(result, [], 'unspill - incomplete trailing group discarded');
+    console.log('✓ unspill - discards incomplete trailing group');
   }
 
   // Test: spill with empty string sentinel (NSV inner spill)
@@ -382,14 +386,12 @@ async function runTests() {
       // Test decoding equivalence: parse === unspill decomposition
       // decode = map(map(unescape)) ∘ unspill[String, ''] ∘ unspill[Char, '\n']
       // Between char-level and string-level unspill, we join char groups into strings.
-      if (direct.length > 0) {
-        const directParse = nsv.parse(direct);
-        const charGroups = nsv.unspill('\n', [...direct]);
-        const strings = charGroups.map(g => g.join(''));
-        const rows = nsv.unspill('', strings);
-        const viaUnspill = rows.map(row => row.map(nsv.unescape));
-        assertEqual(directParse, viaUnspill, `algebraic decode - ${name}`);
-      }
+      const directParse = nsv.parse(direct);
+      const charGroups = nsv.unspill('\n', [...direct]);
+      const strings = charGroups.map(g => g.join(''));
+      const rows = nsv.unspill('', strings);
+      const viaUnspill = rows.map(row => row.map(nsv.unescape));
+      assertEqual(directParse, viaUnspill, `algebraic decode - ${name}`);
     }
     console.log('✓ algebraic equivalence (encode and decode) for all test cases');
   }

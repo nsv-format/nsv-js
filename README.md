@@ -74,7 +74,7 @@ const structured = nsv.unspill('', flat);
 // => [['a', 'b'], ['c']]
 ```
 
-Generic — works with any sentinel type. These decompose the encode/decode pipeline:
+Generic — works with any sentinel type. `unspill` is strict (a left inverse of `spill`): trailing elements not terminated by a sentinel are dropped. These decompose the encode/decode pipeline:
 
 ```
 encode = spill('\n') ∘ spill('') ∘ map(map(escape))
