@@ -307,25 +307,19 @@ class Reader {
 
   /**
    * Finalize parsing when stream ends
+   *
+   * An incomplete trailing row (input not terminated by an empty line) is
+   * buffered, not emitted — resumable readers treat EOF as "no more data yet".
+   * Use parse() for batch input where EOF is the definitive end of data.
    * @private
    */
   _finalize() {
-    // Handle any remaining buffered content
-    if (this._buffer.length > 0) {
-      this._currentRow.push(unescape(this._buffer));
-    }
-
-    // Add final row if it has content
-    if (this._currentRow.length > 0) {
-      this._rowQueue.push(this._currentRow);
-    }
-
     this._done = true;
   }
 
   /**
    * Read next row
-   * @returns {Promise<string[]|null>} Next row or null if no more rows
+   * @returns {Promise<string[]|null>} Next row, or null once no more complete rows can arrive
    */
   async readRow() {
     this._start();

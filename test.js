@@ -184,7 +184,7 @@ async function runTests() {
 
   // Test 20: Reader - readRow
   {
-    const reader = new nsv.Reader('a\nb\n\nc\nd\n');
+    const reader = new nsv.Reader('a\nb\n\nc\nd\n\n');
     const row1 = await reader.readRow();
     const row2 = await reader.readRow();
     const row3 = await reader.readRow();
@@ -196,7 +196,7 @@ async function runTests() {
 
   // Test 21: Reader - readRows
   {
-    const reader = new nsv.Reader('a\nb\n\nc\nd\n');
+    const reader = new nsv.Reader('a\nb\n\nc\nd\n\n');
     const rows = await reader.readRows();
     assertEqual(rows, [['a', 'b'], ['c', 'd']], 'Reader - readRows');
     console.log('✓ Reader - readRows');
@@ -204,7 +204,7 @@ async function runTests() {
 
   // Test 22: Reader - async iterator
   {
-    const reader = new nsv.Reader('a\nb\n\nc\nd\n');
+    const reader = new nsv.Reader('a\nb\n\nc\nd\n\n');
     const rows = [];
     for await (const row of reader) {
       rows.push(row);
@@ -215,11 +215,27 @@ async function runTests() {
 
   // Test 23: Reader from stream
   {
-    const stream = createReadableStream('a\nb\n\nc\nd\n');
+    const stream = createReadableStream('a\nb\n\nc\nd\n\n');
     const reader = new nsv.Reader(stream);
     const rows = await reader.readRows();
     assertEqual(rows, [['a', 'b'], ['c', 'd']], 'Reader from stream');
     console.log('✓ Reader from stream');
+  }
+
+  // Test 23b: Reader buffers incomplete trailing row (resumable EOF semantics)
+  {
+    const reader1 = new nsv.Reader('a\nb\n\nc\nd');
+    assertEqual(await reader1.readRow(), ['a', 'b'], 'Reader - complete row before incomplete tail');
+    assertEqual(await reader1.readRow(), null, 'Reader - incomplete tail buffered, not emitted');
+
+    // Cell-terminated but row-unterminated tail is buffered too
+    const reader2 = new nsv.Reader('a\nb\n\nc\nd\n');
+    assertEqual(await reader2.readRow(), ['a', 'b'], 'Reader - complete row before unterminated row');
+    assertEqual(await reader2.readRow(), null, 'Reader - unterminated row buffered, not emitted');
+
+    // parse() is non-resumable and keeps emitting the tail
+    assertEqual(nsv.parse('a\nb\n\nc\nd'), [['a', 'b'], ['c', 'd']], 'parse - emits incomplete tail');
+    console.log('✓ Reader buffers incomplete trailing row');
   }
 
   // Test 24: Empty data array
