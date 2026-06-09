@@ -7,6 +7,8 @@
  * - Backslash escapes: \\ for \, \n for newline, \ for empty cell
  */
 
+const { StringDecoder } = require('string_decoder');
+
 /**
  * Unescape NSV-encoded string
  * @param {string} str - The escaped string
@@ -139,14 +141,16 @@ async function read(input) {
 
   // Handle stream
   const chunks = [];
+  const decoder = new StringDecoder('utf8');
 
   return new Promise((resolve, reject) => {
-    input.on('data', chunk => chunks.push(chunk));
+    // Buffer chunks go through a persistent StringDecoder: a multi-byte
+    // code point split across chunk boundaries must not decode to U+FFFD.
+    input.on('data', chunk => {
+      chunks.push(typeof chunk === 'string' ? chunk : decoder.write(chunk));
+    });
     input.on('end', () => {
-      // Handle both Buffer and string chunks
-      const text = chunks.map(chunk =>
-        typeof chunk === 'string' ? chunk : chunk.toString('utf8')
-      ).join('');
+      const text = chunks.join('') + decoder.end();
       try {
         resolve(parse(text));
       } catch (error) {
@@ -239,6 +243,7 @@ class Reader {
     this._done = false;
     this._started = false;
     this._error = null;
+    this._decoder = new StringDecoder('utf8');
   }
 
   /**
@@ -259,7 +264,9 @@ class Reader {
     // Otherwise set up stream handlers
     this.input.on('data', (chunk) => {
       try {
-        const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+        // The persistent decoder holds back a trailing partial UTF-8
+        // sequence until the next chunk completes it.
+        const text = typeof chunk === 'string' ? chunk : this._decoder.write(chunk);
         this._processChunk(text);
       } catch (error) {
         this._error = error;
@@ -305,6 +312,12 @@ class Reader {
    * @private
    */
   _finalize() {
+    // Flush a genuinely truncated UTF-8 sequence at stream end
+    const tail = this._decoder.end();
+    if (tail.length > 0) {
+      this._processChunk(tail);
+    }
+
     // Handle any remaining buffered content
     if (this._buffer.length > 0) {
       this._currentRow.push(unescape(this._buffer));

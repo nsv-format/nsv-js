@@ -160,12 +160,94 @@ async function testEmptyRows() {
   console.log('✓ Empty rows handled correctly\n');
 }
 
+// Test 5: Multi-byte UTF-8 code points split across Buffer chunk boundaries.
+// The conformance corpora never catch this: they are pure ASCII, so no code
+// point can straddle a chunk boundary there. Buffer chunks must go through a
+// persistent decoder or a split code point decodes to U+FFFD on both sides.
+async function testUtf8ChunkBoundaries() {
+  console.log('Test 5: UTF-8 code points split across Buffer chunk boundaries');
+
+  function bufferStream(chunks) {
+    let index = 0;
+    return new Readable({
+      read() {
+        this.push(index < chunks.length ? chunks[index++] : null);
+      }
+    });
+  }
+
+  // 2-, 3-, and 4-byte code points
+  const cases = [
+    { name: '2-byte (é)', text: 'café\n\né\n\n' },
+    { name: '3-byte (★)', text: 'a★b\n\n★\n\n' },
+    { name: '4-byte (🎉)', text: 'a\u{1f389}b\n\n\u{1f389}\n\n' },
+  ];
+
+  for (const { name, text } of cases) {
+    const bytes = Buffer.from(text, 'utf8');
+    const expected = nsv.parse(text);
+
+    // Split at every byte position, so every code point gets cut at every
+    // interior byte at some point
+    for (let split = 0; split <= bytes.length; split++) {
+      const chunks = [bytes.slice(0, split), bytes.slice(split)];
+
+      const readerRows = [];
+      for await (const row of new nsv.Reader(bufferStream(chunks))) {
+        readerRows.push(row);
+      }
+      const readRows = await nsv.read(bufferStream(chunks));
+
+      for (const [path, rows] of [['Reader', readerRows], ['read()', readRows]]) {
+        if (JSON.stringify(rows) !== JSON.stringify(expected)) {
+          console.error(`✗ ${name} via ${path}, split at byte ${split}`);
+          console.error('  Expected:', expected);
+          console.error('  Got:', rows);
+          process.exit(1);
+        }
+      }
+    }
+    console.log(`  ✓ ${name}: all ${bytes.length + 1} split positions, Reader and read()`);
+  }
+
+  // Combined: one boundary inside an escape sequence, a later one inside a
+  // code point ('a\nb' encodes as 'a\\nb'; the 🎉 is cut mid-sequence)
+  {
+    const text = 'a\\nb\n\né\u{1f389}\n\n';
+    const bytes = Buffer.from(text, 'utf8');
+    const expected = nsv.parse(text);
+    const escapeSplit = 2; // between '\\' and 'n'
+    const codePointSplit = bytes.length - 4; // inside the 4-byte 🎉
+    const chunks = [
+      bytes.slice(0, escapeSplit),
+      bytes.slice(escapeSplit, codePointSplit),
+      bytes.slice(codePointSplit),
+    ];
+    const readerRows = [];
+    for await (const row of new nsv.Reader(bufferStream(chunks))) {
+      readerRows.push(row);
+    }
+    const readRows = await nsv.read(bufferStream(chunks));
+    for (const [path, rows] of [['Reader', readerRows], ['read()', readRows]]) {
+      if (JSON.stringify(rows) !== JSON.stringify(expected)) {
+        console.error(`✗ combined escape+code-point split via ${path}`);
+        console.error('  Expected:', expected);
+        console.error('  Got:', rows);
+        process.exit(1);
+      }
+    }
+    console.log('  ✓ combined: boundary in escape sequence + boundary in code point');
+  }
+  console.log('✓ UTF-8 chunk boundaries handled correctly\n');
+}
+
 // Run all tests
 (async () => {
   await testChunkedReading();
   await testIncrementalWriting();
   await testInfiniteStream();
   await testEmptyRows();
+  await testUtf8ChunkBoundaries();
   console.log('✓ All streaming tests passed!');
 })().catch(error => {
   console.error('✗ Test failed:', error);
