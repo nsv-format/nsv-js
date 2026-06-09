@@ -222,6 +222,21 @@ async function runTests() {
     console.log('✓ Reader from stream');
   }
 
+  // Test 23b: Reader - empty rows match parse()
+  {
+    const inputs = [
+      'a\n\n\nb\n\n',
+      '\n\n\n\n',
+      'first\n\n\n\nsecond\n\n',
+    ];
+    for (const input of inputs) {
+      const reader = new nsv.Reader(input);
+      const rows = await reader.readRows();
+      assertEqual(rows, nsv.parse(input), `Reader - empty rows (${JSON.stringify(input)})`);
+    }
+    console.log('✓ Reader - empty rows match parse()');
+  }
+
   // Test 24: Empty data array
   {
     const result = nsv.stringify([]);
