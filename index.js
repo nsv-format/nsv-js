@@ -239,7 +239,6 @@ class Reader {
     this._done = false;
     this._started = false;
     this._error = null;
-    this._lastCharWasNewline = false;
   }
 
   /**
@@ -285,22 +284,18 @@ class Reader {
       const char = text[i];
 
       if (char === '\n') {
-        if (this._lastCharWasNewline) {
-          // Double newline - row complete
+        if (this._buffer.length === 0) {
+          // Empty line - row complete
           this._rowQueue.push(this._currentRow);
           this._currentRow = [];
-          this._buffer = '';
-          this._lastCharWasNewline = false;
         } else {
-          // Single newline - cell complete
+          // Content before this newline - it's a cell
           this._currentRow.push(unescape(this._buffer));
           this._buffer = '';
-          this._lastCharWasNewline = true;
         }
       } else {
         // Regular character
         this._buffer += char;
-        this._lastCharWasNewline = false;
       }
     }
   }

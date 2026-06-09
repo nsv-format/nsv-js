@@ -117,11 +117,55 @@ async function testInfiniteStream() {
   }
 }
 
+// Test 4: Empty rows survive streaming, including across chunk boundaries
+async function testEmptyRows() {
+  console.log('Test 4: Streaming inputs with empty rows match parse()');
+
+  const cases = [
+    { name: 'empty row between rows', chunks: ['a\n\n\nb\n\n'] },
+    { name: 'only empty rows', chunks: ['\n\n\n\n'] },
+    { name: 'consecutive empty rows', chunks: ['first\n\n\n\nsecond\n\n'] },
+    { name: 'empty row split across chunk boundary', chunks: ['a\n\n', '\nb\n\n'] },
+    { name: 'every newline its own chunk', chunks: ['a', '\n', '\n', '\n', 'b', '\n', '\n'] },
+  ];
+
+  for (const { name, chunks } of cases) {
+    let index = 0;
+    const stream = new Readable({
+      read() {
+        if (index < chunks.length) {
+          this.push(chunks[index++]);
+        } else {
+          this.push(null);
+        }
+      }
+    });
+
+    const reader = new nsv.Reader(stream);
+    const rows = [];
+    for await (const row of reader) {
+      rows.push(row);
+    }
+
+    const expected = nsv.parse(chunks.join(''));
+    if (JSON.stringify(rows) === JSON.stringify(expected)) {
+      console.log(`  ✓ ${name}: ${JSON.stringify(rows)}`);
+    } else {
+      console.error(`✗ ${name}`);
+      console.error('  Expected:', expected);
+      console.error('  Got:', rows);
+      process.exit(1);
+    }
+  }
+  console.log('✓ Empty rows handled correctly\n');
+}
+
 // Run all tests
 (async () => {
   await testChunkedReading();
   await testIncrementalWriting();
   await testInfiniteStream();
+  await testEmptyRows();
   console.log('✓ All streaming tests passed!');
 })().catch(error => {
   console.error('✗ Test failed:', error);
