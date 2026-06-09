@@ -54,8 +54,6 @@ for await (const row of reader) {
 
 The `Reader` parses incrementally as data arrives—it handles infinite streams and maintains bounded memory usage.
 
-The `Reader` is resumable: at end of input, an incomplete trailing row (one not terminated by an empty line) is buffered, not emitted. Use the non-resumable `parse()` for batch input where the end of the string is the definitive end of data—it does emit the incomplete tail.
-
 **Stream API:**
 - `read(stream)` - read entire stream into memory as array
 - `write(data, stream)` - write entire array to stream
