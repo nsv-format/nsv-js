@@ -16,6 +16,9 @@ function unescape(str) {
   if (str === '\\') {
     return '';
   }
+  if (!str.includes('\\')) {
+    return str;
+  }
 
   let result = '';
   let i = 0;
@@ -233,9 +236,10 @@ class Reader {
    */
   constructor(input) {
     this.input = input;
-    this._buffer = '';
+    this._lineParts = [];
     this._currentRow = [];
     this._rowQueue = [];
+    this._rowHead = 0;
     this._done = false;
     this._started = false;
     this._error = null;
@@ -280,23 +284,27 @@ class Reader {
    * @private
    */
   _processChunk(text) {
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-
-      if (char === '\n') {
-        if (this._buffer.length === 0) {
-          // Empty line - row complete
-          this._rowQueue.push(this._currentRow);
-          this._currentRow = [];
-        } else {
-          // Content before this newline - it's a cell
-          this._currentRow.push(unescape(this._buffer));
-          this._buffer = '';
-        }
-      } else {
-        // Regular character
-        this._buffer += char;
+    let start = 0;
+    let pos;
+    while ((pos = text.indexOf('\n', start)) !== -1) {
+      let line = text.slice(start, pos);
+      if (this._lineParts.length > 0) {
+        this._lineParts.push(line);
+        line = this._lineParts.join('');
+        this._lineParts = [];
       }
+      if (line.length === 0) {
+        // Empty line - row complete
+        this._rowQueue.push(this._currentRow);
+        this._currentRow = [];
+      } else {
+        // Content before this newline - it's a cell
+        this._currentRow.push(unescape(line));
+      }
+      start = pos + 1;
+    }
+    if (start < text.length) {
+      this._lineParts.push(text.slice(start));
     }
   }
 
@@ -316,7 +324,7 @@ class Reader {
     this._start();
 
     // Wait for a row to be available or stream to finish
-    while (this._rowQueue.length === 0 && !this._done) {
+    while (this._rowHead === this._rowQueue.length && !this._done) {
       if (this._error) throw this._error;
       // Wait a tick for more data
       await new Promise(resolve => setImmediate(resolve));
@@ -324,8 +332,13 @@ class Reader {
 
     if (this._error) throw this._error;
 
-    if (this._rowQueue.length > 0) {
-      return this._rowQueue.shift();
+    if (this._rowHead < this._rowQueue.length) {
+      const row = this._rowQueue[this._rowHead++];
+      if (this._rowHead === this._rowQueue.length) {
+        this._rowQueue = [];
+        this._rowHead = 0;
+      }
+      return row;
     }
 
     return null;
