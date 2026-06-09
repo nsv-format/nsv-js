@@ -401,9 +401,6 @@ function spill(sentinel, groups) {
  *
  * unspill('', ['a', 'b', '', 'c', '']) → [['a', 'b'], ['c']]
  *
- * Strict: trailing elements not terminated by a sentinel are dropped,
- * and an empty sequence yields no groups.
- *
  * @template T
  * @param {T} sentinel - The sentinel value to split on
  * @param {T[]} sequence - The flat sequence to split
@@ -420,7 +417,6 @@ function unspill(sentinel, sequence) {
       current.push(element);
     }
   }
-  // Strict: don't append incomplete trailing groups
   return groups;
 }
 
