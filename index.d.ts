@@ -93,6 +93,13 @@ export class Reader {
   readRow(): Promise<string[] | null>;
 
   /**
+   * Cells of the unterminated row in progress, including the unfinished
+   * trailing cell, as consumed so far
+   * @returns A copy of the partial row, or null if there is none
+   */
+  partialRow(): string[] | null;
+
+  /**
    * Read all remaining rows
    * @returns All remaining rows
    */

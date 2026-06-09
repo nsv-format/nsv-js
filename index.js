@@ -345,6 +345,24 @@ class Reader {
   }
 
   /**
+   * Cells of the unterminated row in progress, including the unfinished
+   * trailing cell, as consumed so far
+   * @returns {string[]|null} A copy of the partial row, or null if there is none
+   */
+  partialRow() {
+    this._start();
+
+    if (this._currentRow.length === 0 && this._lineParts.length === 0) {
+      return null;
+    }
+    const row = this._currentRow.slice();
+    if (this._lineParts.length > 0) {
+      row.push(unescape(this._lineParts.join('')));
+    }
+    return row;
+  }
+
+  /**
    * Read all remaining rows
    * @returns {Promise<string[][]>} All remaining rows
    */

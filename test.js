@@ -251,6 +251,37 @@ async function runTests() {
     console.log('✓ Reader buffers incomplete trailing row');
   }
 
+  // Test 23d: partialRow recovers the unterminated tail
+  {
+    const inputs = [
+      'a\nb\n\nc\nd',
+      'a\nb\n\nc\nd\n',
+      'a\nx\\',
+      '\\',
+    ];
+    for (const input of inputs) {
+      const reader = new nsv.Reader(input);
+      const rows = await reader.readRows();
+      const partial = reader.partialRow();
+      assertEqual(
+        partial === null ? rows : rows.concat([partial]),
+        nsv.parse(input),
+        `partialRow - rows + partial == parse (${JSON.stringify(input)})`
+      );
+    }
+
+    const reader = new nsv.Reader('a\nb\n\n');
+    await reader.readRows();
+    assertEqual(reader.partialRow(), null, 'partialRow - null on terminated input');
+
+    const reader2 = new nsv.Reader('a\nb');
+    await reader2.readRows();
+    const first = reader2.partialRow();
+    first.push('mutated');
+    assertEqual(reader2.partialRow(), ['a', 'b'], 'partialRow - returns a copy');
+    console.log('✓ partialRow recovers the unterminated tail');
+  }
+
   // Test 24: Empty data array
   {
     const result = nsv.stringify([]);
