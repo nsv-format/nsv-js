@@ -236,11 +236,10 @@ class Reader {
    */
   constructor(input) {
     this.input = input;
-    this._pieces = [];
-    this._prevNewline = true;
+    this._tailPieces = [];
     this._rowQueue = [];
-    this._rowHead = 0;
-    this._done = false;
+    this._rowQueueHead = 0;
+    this._ended = false;
     this._started = false;
     this._error = null;
   }
@@ -284,13 +283,7 @@ class Reader {
    * @private
    */
   /**
-   * Accumulate raw text and emit rows at row boundaries
-   *
-   * A newline terminates a row exactly when the previous character was a
-   * newline (or there is none), so the last boundary in a chunk is the last
-   * "\n\n" — with one carried bit covering pairs split across chunks and a
-   * leading newline at stream start. Everything up to it is complete rows,
-   * handed to parse(); everything after is the pending tail.
+   * Process a chunk of text, extracting complete rows
    * @private
    */
   _processChunk(text) {
@@ -300,19 +293,26 @@ class Reader {
     let end = text.lastIndexOf('\n\n');
     if (end !== -1) {
       end += 2;
-    } else if (this._prevNewline && text[0] === '\n') {
+    } else if (text[0] === '\n' && this._atLineStart()) {
       end = 1;
     }
-    this._prevNewline = text[text.length - 1] === '\n';
     if (end === -1) {
-      this._pieces.push(text);
+      this._tailPieces.push(text);
       return;
     }
-    this._pieces.push(text.slice(0, end));
-    for (const row of parse(this._pieces.join(''))) {
+    this._tailPieces.push(text.slice(0, end));
+    for (const row of parse(this._tailPieces.join(''))) {
       this._rowQueue.push(row);
     }
-    this._pieces = end < text.length ? [text.slice(end)] : [];
+    this._tailPieces = end < text.length ? [text.slice(end)] : [];
+  }
+
+  /**
+   * @private
+   */
+  _atLineStart() {
+    const pieces = this._tailPieces;
+    return pieces.length === 0 || pieces[pieces.length - 1].endsWith('\n');
   }
 
   /**
@@ -320,7 +320,7 @@ class Reader {
    * @private
    */
   _finalize() {
-    this._done = true;
+    this._ended = true;
   }
 
   /**
@@ -331,7 +331,7 @@ class Reader {
     this._start();
 
     // Wait for a row to be available or stream to finish
-    while (this._rowHead === this._rowQueue.length && !this._done) {
+    while (this._rowQueueHead === this._rowQueue.length && !this._ended) {
       if (this._error) throw this._error;
       // Wait a tick for more data
       await new Promise(resolve => setImmediate(resolve));
@@ -339,11 +339,11 @@ class Reader {
 
     if (this._error) throw this._error;
 
-    if (this._rowHead < this._rowQueue.length) {
-      const row = this._rowQueue[this._rowHead++];
-      if (this._rowHead === this._rowQueue.length) {
+    if (this._rowQueueHead < this._rowQueue.length) {
+      const row = this._rowQueue[this._rowQueueHead++];
+      if (this._rowQueueHead === this._rowQueue.length) {
         this._rowQueue = [];
-        this._rowHead = 0;
+        this._rowQueueHead = 0;
       }
       return row;
     }
@@ -358,10 +358,10 @@ class Reader {
   partial() {
     this._start();
 
-    if (this._pieces.length > 1) {
-      this._pieces = [this._pieces.join('')];
+    if (this._tailPieces.length > 1) {
+      this._tailPieces = [this._tailPieces.join('')];
     }
-    return this._pieces.length === 1 ? this._pieces[0] : '';
+    return this._tailPieces.length === 1 ? this._tailPieces[0] : '';
   }
 
   /**
