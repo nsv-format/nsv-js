@@ -160,12 +160,15 @@ async function testEmptyRows() {
   console.log('✓ Empty rows handled correctly\n');
 }
 
-// Test 5: Multi-byte UTF-8 code points split across Buffer chunk boundaries.
-// The conformance corpora never catch this: they are pure ASCII, so no code
-// point can straddle a chunk boundary there. Buffer chunks must go through a
-// persistent decoder or a split code point decodes to U+FFFD on both sides.
-async function testUtf8ChunkBoundaries() {
-  console.log('Test 5: UTF-8 code points split across Buffer chunk boundaries');
+// Test 5: Buffer chunks are bytes, not text. The library assumes no encoding:
+// Buffer input is transported byte-identically (latin1), so the result must be
+// independent of where chunk boundaries fall — including mid-code-point for
+// multi-byte UTF-8 payloads — and re-encoding cells with
+// Buffer.from(cell, 'latin1') must recover the original bytes exactly.
+// The conformance corpora can't probe this: they are pure ASCII, where any
+// chunking of any per-chunk decoding is safe.
+async function testBufferChunksAreBytes() {
+  console.log('Test 5: Buffer chunks treated as bytes, invariant under chunk boundaries');
 
   function bufferStream(chunks) {
     let index = 0;
@@ -176,7 +179,16 @@ async function testUtf8ChunkBoundaries() {
     });
   }
 
-  // 2-, 3-, and 4-byte code points
+  async function readBoth(chunks) {
+    const readerRows = [];
+    for await (const row of new nsv.Reader(bufferStream(chunks))) {
+      readerRows.push(row);
+    }
+    const readRows = await nsv.read(bufferStream(chunks));
+    return [['Reader', readerRows], ['read()', readRows]];
+  }
+
+  // UTF-8 payloads with 2-, 3-, and 4-byte code points
   const cases = [
     { name: '2-byte (é)', text: 'café\n\né\n\n' },
     { name: '3-byte (★)', text: 'a★b\n\n★\n\n' },
@@ -185,20 +197,25 @@ async function testUtf8ChunkBoundaries() {
 
   for (const { name, text } of cases) {
     const bytes = Buffer.from(text, 'utf8');
-    const expected = nsv.parse(text);
+    // bytes-as-bytes reference: parse of the byte-identity string
+    const expected = nsv.parse(bytes.toString('latin1'));
 
-    // Split at every byte position, so every code point gets cut at every
-    // interior byte at some point
+    // Byte-faithfulness: cells re-encoded as latin1 and decoded as the
+    // caller's encoding (utf8 here) recover the original text cells
+    const recovered = expected.map(row =>
+      row.map(cell => Buffer.from(cell, 'latin1').toString('utf8')));
+    if (JSON.stringify(recovered) !== JSON.stringify(nsv.parse(text))) {
+      console.error(`✗ ${name}: latin1 transport is not byte-faithful`);
+      console.error('  Expected:', nsv.parse(text));
+      console.error('  Got:', recovered);
+      process.exit(1);
+    }
+
+    // Chunking invariance: split at every byte position, so every code point
+    // gets cut at every interior byte at some point
     for (let split = 0; split <= bytes.length; split++) {
       const chunks = [bytes.slice(0, split), bytes.slice(split)];
-
-      const readerRows = [];
-      for await (const row of new nsv.Reader(bufferStream(chunks))) {
-        readerRows.push(row);
-      }
-      const readRows = await nsv.read(bufferStream(chunks));
-
-      for (const [path, rows] of [['Reader', readerRows], ['read()', readRows]]) {
+      for (const [path, rows] of await readBoth(chunks)) {
         if (JSON.stringify(rows) !== JSON.stringify(expected)) {
           console.error(`✗ ${name} via ${path}, split at byte ${split}`);
           console.error('  Expected:', expected);
@@ -207,7 +224,7 @@ async function testUtf8ChunkBoundaries() {
         }
       }
     }
-    console.log(`  ✓ ${name}: all ${bytes.length + 1} split positions, Reader and read()`);
+    console.log(`  ✓ ${name}: byte-faithful, all ${bytes.length + 1} split positions, Reader and read()`);
   }
 
   // Combined: one boundary inside an escape sequence, a later one inside a
@@ -215,7 +232,7 @@ async function testUtf8ChunkBoundaries() {
   {
     const text = 'a\\nb\n\né\u{1f389}\n\n';
     const bytes = Buffer.from(text, 'utf8');
-    const expected = nsv.parse(text);
+    const expected = nsv.parse(bytes.toString('latin1'));
     const escapeSplit = 2; // between '\\' and 'n'
     const codePointSplit = bytes.length - 4; // inside the 4-byte 🎉
     const chunks = [
@@ -223,12 +240,7 @@ async function testUtf8ChunkBoundaries() {
       bytes.slice(escapeSplit, codePointSplit),
       bytes.slice(codePointSplit),
     ];
-    const readerRows = [];
-    for await (const row of new nsv.Reader(bufferStream(chunks))) {
-      readerRows.push(row);
-    }
-    const readRows = await nsv.read(bufferStream(chunks));
-    for (const [path, rows] of [['Reader', readerRows], ['read()', readRows]]) {
+    for (const [path, rows] of await readBoth(chunks)) {
       if (JSON.stringify(rows) !== JSON.stringify(expected)) {
         console.error(`✗ combined escape+code-point split via ${path}`);
         console.error('  Expected:', expected);
@@ -238,7 +250,7 @@ async function testUtf8ChunkBoundaries() {
     }
     console.log('  ✓ combined: boundary in escape sequence + boundary in code point');
   }
-  console.log('✓ UTF-8 chunk boundaries handled correctly\n');
+  console.log('✓ Buffer chunks handled as bytes correctly\n');
 }
 
 // Run all tests
@@ -247,7 +259,7 @@ async function testUtf8ChunkBoundaries() {
   await testIncrementalWriting();
   await testInfiniteStream();
   await testEmptyRows();
-  await testUtf8ChunkBoundaries();
+  await testBufferChunksAreBytes();
   console.log('✓ All streaming tests passed!');
 })().catch(error => {
   console.error('✗ Test failed:', error);

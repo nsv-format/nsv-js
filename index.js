@@ -5,9 +5,17 @@
  * - Single newlines separate cells within a row
  * - Double newlines separate rows
  * - Backslash escapes: \\ for \, \n for newline, \ for empty cell
+ *
+ * Encoding: NSV structure is byte-level — only 0x0A, 0x5C, 0x6E are
+ * significant — with no encoding assumption: the format works over any
+ * ASCII-compatible encoding. As in the other implementations (cf. Rust's
+ * decode_bytes / byte-level streaming Reader), this library never decodes
+ * for you: string input is parsed as given, and Buffer chunks are
+ * transported as raw bytes (latin1, the byte-identity decoding). Callers
+ * wanting decoded text should decode themselves (e.g.
+ * stream.setEncoding('utf8')) or re-encode cells with
+ * Buffer.from(cell, 'latin1') and decode as they see fit.
  */
-
-const { StringDecoder } = require('string_decoder');
 
 /**
  * Unescape NSV-encoded string
@@ -141,16 +149,16 @@ async function read(input) {
 
   // Handle stream
   const chunks = [];
-  const decoder = new StringDecoder('utf8');
 
   return new Promise((resolve, reject) => {
-    // Buffer chunks go through a persistent StringDecoder: a multi-byte
-    // code point split across chunk boundaries must not decode to U+FFFD.
+    // Buffer chunks are bytes, not text: latin1 is the byte-identity
+    // decoding, so this is safe at any chunk boundary and assumes no
+    // encoding (see module header).
     input.on('data', chunk => {
-      chunks.push(typeof chunk === 'string' ? chunk : decoder.write(chunk));
+      chunks.push(typeof chunk === 'string' ? chunk : chunk.toString('latin1'));
     });
     input.on('end', () => {
-      const text = chunks.join('') + decoder.end();
+      const text = chunks.join('');
       try {
         resolve(parse(text));
       } catch (error) {
@@ -243,7 +251,6 @@ class Reader {
     this._done = false;
     this._started = false;
     this._error = null;
-    this._decoder = new StringDecoder('utf8');
   }
 
   /**
@@ -264,9 +271,10 @@ class Reader {
     // Otherwise set up stream handlers
     this.input.on('data', (chunk) => {
       try {
-        // The persistent decoder holds back a trailing partial UTF-8
-        // sequence until the next chunk completes it.
-        const text = typeof chunk === 'string' ? chunk : this._decoder.write(chunk);
+        // Buffer chunks are bytes, not text: latin1 is the byte-identity
+        // decoding, so this is safe at any chunk boundary and assumes no
+        // encoding (see module header).
+        const text = typeof chunk === 'string' ? chunk : chunk.toString('latin1');
         this._processChunk(text);
       } catch (error) {
         this._error = error;
@@ -312,12 +320,6 @@ class Reader {
    * @private
    */
   _finalize() {
-    // Flush a genuinely truncated UTF-8 sequence at stream end
-    const tail = this._decoder.end();
-    if (tail.length > 0) {
-      this._processChunk(tail);
-    }
-
     // Handle any remaining buffered content
     if (this._buffer.length > 0) {
       this._currentRow.push(unescape(this._buffer));
