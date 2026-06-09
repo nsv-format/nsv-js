@@ -318,7 +318,7 @@ class Reader {
 
   /**
    * Read next row
-   * @returns {Promise<string[]|null>} Next row, or null once no more complete rows can arrive
+   * @returns {Promise<string[]|null>} Next row or null if no more rows
    */
   async readRow() {
     this._start();

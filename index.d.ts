@@ -82,17 +82,13 @@ export class Writer {
 
 /**
  * Reader for incrementally reading NSV rows
- *
- * Resumable: an incomplete trailing row (input not terminated by an empty
- * line) is buffered at end of input, not emitted. Use parse() for batch
- * input where EOF is the definitive end of data.
  */
 export class Reader {
   constructor(input: Readable | string);
 
   /**
    * Read next row
-   * @returns Next row, or null once no more complete rows can arrive
+   * @returns Next row or null if no more rows
    */
   readRow(): Promise<string[] | null>;
 
