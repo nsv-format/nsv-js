@@ -236,8 +236,8 @@ class Reader {
    */
   constructor(input) {
     this.input = input;
-    this._lineParts = [];
-    this._currentRow = [];
+    this._pieces = [];
+    this._prevNewline = true;
     this._rowQueue = [];
     this._rowHead = 0;
     this._done = false;
@@ -283,29 +283,36 @@ class Reader {
    * Process a chunk of text, extracting complete rows
    * @private
    */
+  /**
+   * Accumulate raw text and emit rows at row boundaries
+   *
+   * A newline terminates a row exactly when the previous character was a
+   * newline (or there is none), so the last boundary in a chunk is the last
+   * "\n\n" — with one carried bit covering pairs split across chunks and a
+   * leading newline at stream start. Everything up to it is complete rows,
+   * handed to parse(); everything after is the pending tail.
+   * @private
+   */
   _processChunk(text) {
-    let start = 0;
-    let pos;
-    while ((pos = text.indexOf('\n', start)) !== -1) {
-      let line = text.slice(start, pos);
-      if (this._lineParts.length > 0) {
-        this._lineParts.push(line);
-        line = this._lineParts.join('');
-        this._lineParts = [];
-      }
-      if (line.length === 0) {
-        // Empty line - row complete
-        this._rowQueue.push(this._currentRow);
-        this._currentRow = [];
-      } else {
-        // Content before this newline - it's a cell
-        this._currentRow.push(unescape(line));
-      }
-      start = pos + 1;
+    if (text.length === 0) {
+      return;
     }
-    if (start < text.length) {
-      this._lineParts.push(text.slice(start));
+    let end = text.lastIndexOf('\n\n');
+    if (end !== -1) {
+      end += 2;
+    } else if (this._prevNewline && text[0] === '\n') {
+      end = 1;
     }
+    this._prevNewline = text[text.length - 1] === '\n';
+    if (end === -1) {
+      this._pieces.push(text);
+      return;
+    }
+    this._pieces.push(text.slice(0, end));
+    for (const row of parse(this._pieces.join(''))) {
+      this._rowQueue.push(row);
+    }
+    this._pieces = end < text.length ? [text.slice(end)] : [];
   }
 
   /**
@@ -345,21 +352,16 @@ class Reader {
   }
 
   /**
-   * Cells of the unterminated row in progress, including the unfinished
-   * trailing cell, as consumed so far
-   * @returns {string[]|null} A copy of the partial row, or null if there is none
+   * Raw encoded text of the unterminated row in progress, as consumed so far
+   * @returns {string} The unparsed tail; empty when there is none
    */
-  partialRow() {
+  partial() {
     this._start();
 
-    if (this._currentRow.length === 0 && this._lineParts.length === 0) {
-      return null;
+    if (this._pieces.length > 1) {
+      this._pieces = [this._pieces.join('')];
     }
-    const row = this._currentRow.slice();
-    if (this._lineParts.length > 0) {
-      row.push(unescape(this._lineParts.join('')));
-    }
-    return row;
+    return this._pieces.length === 1 ? this._pieces[0] : '';
   }
 
   /**

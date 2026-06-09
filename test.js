@@ -251,35 +251,35 @@ async function runTests() {
     console.log('✓ Reader buffers incomplete trailing row');
   }
 
-  // Test 23d: partialRow recovers the unterminated tail
+  // Test 23d: partial() exposes the unterminated tail
   {
     const inputs = [
       'a\nb\n\nc\nd',
       'a\nb\n\nc\nd\n',
       'a\nx\\',
       '\\',
+      'a\nb\n\n',
+      '',
+      '\n',
     ];
     for (const input of inputs) {
       const reader = new nsv.Reader(input);
       const rows = await reader.readRows();
-      const partial = reader.partialRow();
       assertEqual(
-        partial === null ? rows : rows.concat([partial]),
+        rows.concat(nsv.parse(reader.partial())),
         nsv.parse(input),
-        `partialRow - rows + partial == parse (${JSON.stringify(input)})`
+        `partial - rows + parse(partial) == parse (${JSON.stringify(input)})`
       );
     }
 
-    const reader = new nsv.Reader('a\nb\n\n');
+    const reader = new nsv.Reader('a\nb\n\nc\\nd');
     await reader.readRows();
-    assertEqual(reader.partialRow(), null, 'partialRow - null on terminated input');
+    assertEqual(reader.partial(), 'c\\nd', 'partial - raw escaped text');
 
-    const reader2 = new nsv.Reader('a\nb');
+    const reader2 = new nsv.Reader('a\nb\n\n');
     await reader2.readRows();
-    const first = reader2.partialRow();
-    first.push('mutated');
-    assertEqual(reader2.partialRow(), ['a', 'b'], 'partialRow - returns a copy');
-    console.log('✓ partialRow recovers the unterminated tail');
+    assertEqual(reader2.partial(), '', 'partial - empty on terminated input');
+    console.log('✓ partial() exposes the unterminated tail');
   }
 
   // Test 24: Empty data array
