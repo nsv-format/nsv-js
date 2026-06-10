@@ -16,12 +16,12 @@ npm install @nsv-format/nsv
 const nsv = require('@nsv-format/nsv');
 
 // Parse NSV text
-const data = nsv.parse('name\nemail\n\nAlice\nalice@example.com\n');
+const data = nsv.parse('name\nemail\n\nAlice\nalice@example.com\n\n');
 // => [['name', 'email'], ['Alice', 'alice@example.com']]
 
 // Serialize to NSV
 const text = nsv.stringify([['name', 'email'], ['Alice', 'alice@example.com']]);
-// => 'name\nemail\n\nAlice\nalice@example.com\n'
+// => 'name\nemail\n\nAlice\nalice@example.com\n\n'
 ```
 
 
@@ -32,7 +32,7 @@ For large files, one can use `Reader` and `Writer` to process data incrementally
 ```javascript
 const fs = require('fs');
 
-const reader = new nsv.Reader(fs.createReadStream('input.nsv'));
+const reader = new nsv.Reader(fs.createReadStream('input.nsv', { encoding: 'utf8' }));
 const writer = new nsv.Writer(fs.createWriteStream('output.nsv'));
 
 for await (const row of reader) {
@@ -48,6 +48,7 @@ The `Reader` parses incrementally as data arrives—it handles infinite streams 
 - `write(data, stream)` - write entire array to stream
 - `reader.readRow()` - read next row (returns `null` when done)
 - `reader.readRows()` - read all remaining rows into array
+- `reader.partial()` - raw text of the row in progress
 - `writer.writeRow(row)` - write a single row
 - `writer.writeRows(rows)` - write multiple rows
 
