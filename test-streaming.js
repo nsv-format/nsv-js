@@ -160,12 +160,92 @@ async function testEmptyRows() {
   console.log('✓ Empty rows handled correctly\n');
 }
 
+// Test 5: Buffer chunks are bytes — result independent of chunk boundaries
+async function testBufferChunksAreBytes() {
+  console.log('Test 5: Buffer chunks treated as bytes, invariant under chunk boundaries');
+
+  function bufferStream(chunks) {
+    let index = 0;
+    return new Readable({
+      read() {
+        this.push(index < chunks.length ? chunks[index++] : null);
+      }
+    });
+  }
+
+  async function readBoth(chunks) {
+    const readerRows = [];
+    for await (const row of new nsv.Reader(bufferStream(chunks))) {
+      readerRows.push(row);
+    }
+    const readRows = await nsv.read(bufferStream(chunks));
+    return [['Reader', readerRows], ['read()', readRows]];
+  }
+
+  const cases = [
+    { name: '2-byte (é)', text: 'café\n\né\n\n' },
+    { name: '3-byte (★)', text: 'a★b\n\n★\n\n' },
+    { name: '4-byte (🎉)', text: 'a\u{1f389}b\n\n\u{1f389}\n\n' },
+  ];
+
+  for (const { name, text } of cases) {
+    const bytes = Buffer.from(text, 'utf8');
+    const expected = nsv.parse(bytes.toString('latin1'));
+
+    const recovered = expected.map(row =>
+      row.map(cell => Buffer.from(cell, 'latin1').toString('utf8')));
+    if (JSON.stringify(recovered) !== JSON.stringify(nsv.parse(text))) {
+      console.error(`✗ ${name}: latin1 transport is not byte-faithful`);
+      console.error('  Expected:', nsv.parse(text));
+      console.error('  Got:', recovered);
+      process.exit(1);
+    }
+
+    for (let split = 0; split <= bytes.length; split++) {
+      const chunks = [bytes.slice(0, split), bytes.slice(split)];
+      for (const [path, rows] of await readBoth(chunks)) {
+        if (JSON.stringify(rows) !== JSON.stringify(expected)) {
+          console.error(`✗ ${name} via ${path}, split at byte ${split}`);
+          console.error('  Expected:', expected);
+          console.error('  Got:', rows);
+          process.exit(1);
+        }
+      }
+    }
+    console.log(`  ✓ ${name}: byte-faithful, all ${bytes.length + 1} split positions, Reader and read()`);
+  }
+
+  {
+    const text = 'a\\nb\n\né\u{1f389}\n\n';
+    const bytes = Buffer.from(text, 'utf8');
+    const expected = nsv.parse(bytes.toString('latin1'));
+    const escapeSplit = 2;
+    const codePointSplit = bytes.length - 4;
+    const chunks = [
+      bytes.slice(0, escapeSplit),
+      bytes.slice(escapeSplit, codePointSplit),
+      bytes.slice(codePointSplit),
+    ];
+    for (const [path, rows] of await readBoth(chunks)) {
+      if (JSON.stringify(rows) !== JSON.stringify(expected)) {
+        console.error(`✗ combined escape+code-point split via ${path}`);
+        console.error('  Expected:', expected);
+        console.error('  Got:', rows);
+        process.exit(1);
+      }
+    }
+    console.log('  ✓ combined: boundary in escape sequence + boundary in code point');
+  }
+  console.log('✓ Buffer chunks handled as bytes correctly\n');
+}
+
 // Run all tests
 (async () => {
   await testChunkedReading();
   await testIncrementalWriting();
   await testInfiniteStream();
   await testEmptyRows();
+  await testBufferChunksAreBytes();
   console.log('✓ All streaming tests passed!');
 })().catch(error => {
   console.error('✗ Test failed:', error);

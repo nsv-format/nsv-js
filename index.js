@@ -148,7 +148,7 @@ async function read(input) {
     input.on('end', () => {
       // Handle both Buffer and string chunks
       const text = chunks.map(chunk =>
-        typeof chunk === 'string' ? chunk : chunk.toString('utf8')
+        typeof chunk === 'string' ? chunk : chunk.toString('latin1')
       ).join('');
       try {
         resolve(parse(text));
@@ -262,7 +262,7 @@ class Reader {
     // Otherwise set up stream handlers
     this.input.on('data', (chunk) => {
       try {
-        const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+        const text = typeof chunk === 'string' ? chunk : chunk.toString('latin1');
         this._processChunk(text);
       } catch (error) {
         this._error = error;

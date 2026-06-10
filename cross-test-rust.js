@@ -3,8 +3,8 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-// Use NSV_RUST_VERSION env var if set, otherwise default to 0.0.9
-const nsvVersion = process.env.NSV_RUST_VERSION || '0.0.9';
+// Use NSV_RUST_VERSION env var if set, otherwise default to 0.0.12
+const nsvVersion = process.env.NSV_RUST_VERSION || '0.0.12';
 
 // Test cases
 const tests = [
