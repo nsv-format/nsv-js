@@ -93,12 +93,6 @@ export class Reader {
   readRow(): Promise<string[] | null>;
 
   /**
-   * Raw encoded text of the row in progress, as consumed so far
-   * @returns The unparsed text; empty when there is none
-   */
-  partial(): string;
-
-  /**
    * Read all remaining rows
    * @returns All remaining rows
    */
@@ -108,4 +102,10 @@ export class Reader {
    * Async iterator support
    */
   [Symbol.asyncIterator](): AsyncIterableIterator<string[]>;
+
+  /**
+   * Raw encoded text of the row in progress, as consumed so far
+   * @returns The unparsed text; empty when there is none
+   */
+  partial(): string;
 }

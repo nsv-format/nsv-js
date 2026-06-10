@@ -2,9 +2,9 @@
  * NSV (Newline-Separated Values) format parser and serializer
  *
  * NSV is a plain text data format for sequences of sequences.
- * - Single newlines separate cells within a row
- * - Double newlines separate rows
- * - Backslash escapes: \\ for \, \n for newline, \ for empty cell
+ * - Each cell is terminated by a newline
+ * - Each row is terminated by an additional newline (an empty line)
+ * - Backslash escapes: \\ for \, \n for newline, lone \ for empty cell
  */
 
 /**
@@ -228,7 +228,6 @@ class Writer {
 
 /**
  * Create a reader for incrementally reading NSV rows
- * Truly streams data - parses rows as chunks arrive without buffering entire input
  */
 class Reader {
   /**
@@ -333,22 +332,10 @@ class Reader {
   }
 
   /**
-   * Raw encoded text of the row in progress, as consumed so far
-   * @returns {string} The unparsed text; empty when there is none
-   */
-  partial() {
-    this._start();
-
-    return this._partial;
-  }
-
-  /**
    * Read all remaining rows
    * @returns {Promise<string[][]>} All remaining rows
    */
   async readRows() {
-    this._start();
-
     const rows = [];
     let row;
     while ((row = await this.readRow()) !== null) {
@@ -361,12 +348,20 @@ class Reader {
    * Async iterator support
    */
   async *[Symbol.asyncIterator]() {
-    this._start();
-
     let row;
     while ((row = await this.readRow()) !== null) {
       yield row;
     }
+  }
+
+  /**
+   * Raw encoded text of the row in progress, as consumed so far
+   * @returns {string} The unparsed text; empty when there is none
+   */
+  partial() {
+    this._start();
+
+    return this._partial;
   }
 }
 
