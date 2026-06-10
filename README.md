@@ -1,21 +1,10 @@
-# NSV - Newline-Separated Values
-
 [![CI](https://github.com/nsv-format/nsv-js/workflows/CI/badge.svg)](https://github.com/nsv-format/nsv-js/actions)
 
-NSV is a plain text format for sequences of sequences.
+# NSV JS
 
-```nsv
-name
-email
+JavaScript implementation of the [NSV (Newline-Separated Values)](https://nsv-format.org) format.
 
-Alice
-alice@example.com
-
-Bob
-bob@example.com
-```
-
-## Install
+## Installation
 
 ```bash
 npm install @nsv-format/nsv
@@ -91,13 +80,9 @@ import * as nsv from '@nsv-format/nsv';
 const data: string[][] = nsv.parse(text);
 ```
 
-## Cross-tested
+## Vendor
 
-This implementation is tested against:
-- [Python implementation](https://pypi.org/project/nsv/)
-- [Rust implementation](https://crates.io/crates/nsv)
-
-## Spec
-
-See [nsv-format/nsv](https://github.com/nsv-format/nsv) for the format specification.
+The core NSV format is frozen by-design.  
+Unless you rely on ENSV features or are performance-aware, copying the naive implementation directly to your codebase may be the better way to handle NSV files.  
+Controllable code, controllable interfaces, zero chance of a supply-chain attack.
 
