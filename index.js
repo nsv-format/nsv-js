@@ -2,9 +2,9 @@
  * NSV (Newline-Separated Values) format parser and serializer
  *
  * NSV is a plain text data format for sequences of sequences.
- * - Single newlines separate cells within a row
- * - Double newlines separate rows
- * - Backslash escapes: \\ for \, \n for newline, \ for empty cell
+ * - Each cell is terminated by a newline
+ * - Each row is terminated by an additional newline (an empty line)
+ * - Backslash escapes: \\ for \, \n for newline, lone \ for empty cell
  */
 
 /**
@@ -15,6 +15,9 @@
 function unescape(str) {
   if (str === '\\') {
     return '';
+  }
+  if (!str.includes('\\')) {
+    return str;
   }
 
   let result = '';
@@ -225,7 +228,6 @@ class Writer {
 
 /**
  * Create a reader for incrementally reading NSV rows
- * Truly streams data - parses rows as chunks arrive without buffering entire input
  */
 class Reader {
   /**
@@ -233,11 +235,12 @@ class Reader {
    */
   constructor(input) {
     this.input = input;
-    this._buffer = '';
-    this._currentRow = [];
+    this._partial = '';
+    this._atLineStart = true;
     this._rowQueue = [];
-    this._done = false;
+    this._rowQueueHead = 0;
     this._started = false;
+    this._ended = false;
     this._error = null;
   }
 
@@ -252,7 +255,7 @@ class Reader {
     // If input is a string, process it directly
     if (typeof this.input === 'string') {
       this._processChunk(this.input);
-      this._finalize();
+      this._ended = true;
       return;
     }
 
@@ -267,7 +270,7 @@ class Reader {
     });
 
     this.input.on('end', () => {
-      this._finalize();
+      this._ended = true;
     });
 
     this.input.on('error', (error) => {
@@ -280,42 +283,24 @@ class Reader {
    * @private
    */
   _processChunk(text) {
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-
-      if (char === '\n') {
-        if (this._buffer.length === 0) {
-          // Empty line - row complete
-          this._rowQueue.push(this._currentRow);
-          this._currentRow = [];
-        } else {
-          // Content before this newline - it's a cell
-          this._currentRow.push(unescape(this._buffer));
-          this._buffer = '';
-        }
-      } else {
-        // Regular character
-        this._buffer += char;
-      }
+    if (text.length === 0) {
+      return;
     }
-  }
-
-  /**
-   * Finalize parsing when stream ends
-   * @private
-   */
-  _finalize() {
-    // Handle any remaining buffered content
-    if (this._buffer.length > 0) {
-      this._currentRow.push(unescape(this._buffer));
+    let end = text.lastIndexOf('\n\n');
+    if (end !== -1) {
+      end += 2;
+    } else if (text[0] === '\n' && this._atLineStart) {
+      end = 1;
     }
-
-    // Add final row if it has content
-    if (this._currentRow.length > 0) {
-      this._rowQueue.push(this._currentRow);
+    this._atLineStart = text[text.length - 1] === '\n';
+    if (end === -1) {
+      this._partial += text;
+      return;
     }
-
-    this._done = true;
+    for (const row of parse(this._partial + text.slice(0, end))) {
+      this._rowQueue.push(row);
+    }
+    this._partial = end < text.length ? text.slice(end) : '';
   }
 
   /**
@@ -326,7 +311,7 @@ class Reader {
     this._start();
 
     // Wait for a row to be available or stream to finish
-    while (this._rowQueue.length === 0 && !this._done) {
+    while (this._rowQueueHead === this._rowQueue.length && !this._ended) {
       if (this._error) throw this._error;
       // Wait a tick for more data
       await new Promise(resolve => setImmediate(resolve));
@@ -334,8 +319,13 @@ class Reader {
 
     if (this._error) throw this._error;
 
-    if (this._rowQueue.length > 0) {
-      return this._rowQueue.shift();
+    if (this._rowQueueHead < this._rowQueue.length) {
+      const row = this._rowQueue[this._rowQueueHead++];
+      if (this._rowQueueHead === this._rowQueue.length) {
+        this._rowQueue = [];
+        this._rowQueueHead = 0;
+      }
+      return row;
     }
 
     return null;
@@ -346,8 +336,6 @@ class Reader {
    * @returns {Promise<string[][]>} All remaining rows
    */
   async readRows() {
-    this._start();
-
     const rows = [];
     let row;
     while ((row = await this.readRow()) !== null) {
@@ -360,12 +348,20 @@ class Reader {
    * Async iterator support
    */
   async *[Symbol.asyncIterator]() {
-    this._start();
-
     let row;
     while ((row = await this.readRow()) !== null) {
       yield row;
     }
+  }
+
+  /**
+   * Raw encoded text of the row in progress, as consumed so far
+   * @returns {string} The unparsed text; empty when there is none
+   */
+  partial() {
+    this._start();
+
+    return this._partial;
   }
 }
 

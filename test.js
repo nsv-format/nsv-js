@@ -184,7 +184,7 @@ async function runTests() {
 
   // Test 20: Reader - readRow
   {
-    const reader = new nsv.Reader('a\nb\n\nc\nd\n');
+    const reader = new nsv.Reader('a\nb\n\nc\nd\n\n');
     const row1 = await reader.readRow();
     const row2 = await reader.readRow();
     const row3 = await reader.readRow();
@@ -196,7 +196,7 @@ async function runTests() {
 
   // Test 21: Reader - readRows
   {
-    const reader = new nsv.Reader('a\nb\n\nc\nd\n');
+    const reader = new nsv.Reader('a\nb\n\nc\nd\n\n');
     const rows = await reader.readRows();
     assertEqual(rows, [['a', 'b'], ['c', 'd']], 'Reader - readRows');
     console.log('✓ Reader - readRows');
@@ -204,7 +204,7 @@ async function runTests() {
 
   // Test 22: Reader - async iterator
   {
-    const reader = new nsv.Reader('a\nb\n\nc\nd\n');
+    const reader = new nsv.Reader('a\nb\n\nc\nd\n\n');
     const rows = [];
     for await (const row of reader) {
       rows.push(row);
@@ -215,7 +215,7 @@ async function runTests() {
 
   // Test 23: Reader from stream
   {
-    const stream = createReadableStream('a\nb\n\nc\nd\n');
+    const stream = createReadableStream('a\nb\n\nc\nd\n\n');
     const reader = new nsv.Reader(stream);
     const rows = await reader.readRows();
     assertEqual(rows, [['a', 'b'], ['c', 'd']], 'Reader from stream');
@@ -235,6 +235,51 @@ async function runTests() {
       assertEqual(rows, nsv.parse(input), `Reader - empty rows (${JSON.stringify(input)})`);
     }
     console.log('✓ Reader - empty rows match parse()');
+  }
+
+  // Test 23c: Reader withholds an unterminated final row
+  {
+    const reader1 = new nsv.Reader('a\nb\n\nc\nd');
+    assertEqual(await reader1.readRow(), ['a', 'b'], 'Reader - row before unterminated row');
+    assertEqual(await reader1.readRow(), null, 'Reader - unterminated row not emitted');
+
+    const reader2 = new nsv.Reader('a\nb\n\nc\nd\n');
+    assertEqual(await reader2.readRow(), ['a', 'b'], 'Reader - row before cell-terminated row');
+    assertEqual(await reader2.readRow(), null, 'Reader - cell-terminated row not emitted');
+
+    assertEqual(nsv.parse('a\nb\n\nc\nd'), [['a', 'b'], ['c', 'd']], 'parse - emits unterminated row');
+    console.log('✓ Reader withholds an unterminated final row');
+  }
+
+  // Test 23d: partial() exposes the row in progress
+  {
+    const inputs = [
+      'a\nb\n\nc\nd',
+      'a\nb\n\nc\nd\n',
+      'a\nx\\',
+      '\\',
+      'a\nb\n\n',
+      '',
+      '\n',
+    ];
+    for (const input of inputs) {
+      const reader = new nsv.Reader(input);
+      const rows = await reader.readRows();
+      assertEqual(
+        rows.concat(nsv.parse(reader.partial())),
+        nsv.parse(input),
+        `partial - rows + parse(partial) == parse (${JSON.stringify(input)})`
+      );
+    }
+
+    const reader = new nsv.Reader('a\nb\n\nc\\nd');
+    await reader.readRows();
+    assertEqual(reader.partial(), 'c\\nd', 'partial - raw escaped text');
+
+    const reader2 = new nsv.Reader('a\nb\n\n');
+    await reader2.readRows();
+    assertEqual(reader2.partial(), '', 'partial - empty on terminated input');
+    console.log('✓ partial() exposes the row in progress');
   }
 
   // Test 24: Empty data array
