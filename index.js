@@ -141,12 +141,12 @@ async function read(input) {
   const chunks = [];
 
   return new Promise((resolve, reject) => {
-    // Handle both Buffer and string chunks
-    input.on('data', chunk => {
-      chunks.push(typeof chunk === 'string' ? chunk : chunk.toString('latin1'));
-    });
+    input.on('data', chunk => chunks.push(chunk));
     input.on('end', () => {
-      const text = chunks.join('');
+      // Handle both Buffer and string chunks
+      const text = chunks.map(chunk =>
+        typeof chunk === 'string' ? chunk : chunk.toString('latin1')
+      ).join('');
       try {
         resolve(parse(text));
       } catch (error) {
