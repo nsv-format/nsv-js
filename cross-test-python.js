@@ -20,7 +20,7 @@ const tests = [
   { name: 'complex example', input: 'first\nrow\n\nsecond\nrow\n\nmissing ->\n\\\n<- missing\n\nRoses are red\\nViolets are blue\\nThis may be pain\\nBut CSV would be, too\nTab\\tseparated\\tvalues\\n(would be left as-is normally)\nNot a newline: \\\\n\n' },
 ];
 
-console.log('Cross-testing JS implementation against Python (PyPI 0.2.2)\n');
+console.log('Cross-testing JS implementation against Python (PyPI 0.2.3)\n');
 console.log('='.repeat(60) + '\n');
 
 let passCount = 0;
