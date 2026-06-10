@@ -5,16 +5,6 @@
  * - Single newlines separate cells within a row
  * - Double newlines separate rows
  * - Backslash escapes: \\ for \, \n for newline, \ for empty cell
- *
- * Encoding: NSV structure is byte-level — only 0x0A, 0x5C, 0x6E are
- * significant — with no encoding assumption: the format works over any
- * ASCII-compatible encoding. As in the other implementations (cf. Rust's
- * decode_bytes / byte-level streaming Reader), this library never decodes
- * for you: string input is parsed as given, and Buffer chunks are
- * transported as raw bytes (latin1, the byte-identity decoding). Callers
- * wanting decoded text should decode themselves (e.g.
- * stream.setEncoding('utf8')) or re-encode cells with
- * Buffer.from(cell, 'latin1') and decode as they see fit.
  */
 
 /**
@@ -151,9 +141,7 @@ async function read(input) {
   const chunks = [];
 
   return new Promise((resolve, reject) => {
-    // Buffer chunks are bytes, not text: latin1 is the byte-identity
-    // decoding, so this is safe at any chunk boundary and assumes no
-    // encoding (see module header).
+    // Handle both Buffer and string chunks
     input.on('data', chunk => {
       chunks.push(typeof chunk === 'string' ? chunk : chunk.toString('latin1'));
     });
@@ -271,9 +259,6 @@ class Reader {
     // Otherwise set up stream handlers
     this.input.on('data', (chunk) => {
       try {
-        // Buffer chunks are bytes, not text: latin1 is the byte-identity
-        // decoding, so this is safe at any chunk boundary and assumes no
-        // encoding (see module header).
         const text = typeof chunk === 'string' ? chunk : chunk.toString('latin1');
         this._processChunk(text);
       } catch (error) {

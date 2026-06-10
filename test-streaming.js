@@ -160,13 +160,7 @@ async function testEmptyRows() {
   console.log('✓ Empty rows handled correctly\n');
 }
 
-// Test 5: Buffer chunks are bytes, not text. The library assumes no encoding:
-// Buffer input is transported byte-identically (latin1), so the result must be
-// independent of where chunk boundaries fall — including mid-code-point for
-// multi-byte UTF-8 payloads — and re-encoding cells with
-// Buffer.from(cell, 'latin1') must recover the original bytes exactly.
-// The conformance corpora can't probe this: they are pure ASCII, where any
-// chunking of any per-chunk decoding is safe.
+// Test 5: Buffer chunks are bytes — result independent of chunk boundaries
 async function testBufferChunksAreBytes() {
   console.log('Test 5: Buffer chunks treated as bytes, invariant under chunk boundaries');
 
@@ -188,7 +182,6 @@ async function testBufferChunksAreBytes() {
     return [['Reader', readerRows], ['read()', readRows]];
   }
 
-  // UTF-8 payloads with 2-, 3-, and 4-byte code points
   const cases = [
     { name: '2-byte (é)', text: 'café\n\né\n\n' },
     { name: '3-byte (★)', text: 'a★b\n\n★\n\n' },
@@ -197,11 +190,8 @@ async function testBufferChunksAreBytes() {
 
   for (const { name, text } of cases) {
     const bytes = Buffer.from(text, 'utf8');
-    // bytes-as-bytes reference: parse of the byte-identity string
     const expected = nsv.parse(bytes.toString('latin1'));
 
-    // Byte-faithfulness: cells re-encoded as latin1 and decoded as the
-    // caller's encoding (utf8 here) recover the original text cells
     const recovered = expected.map(row =>
       row.map(cell => Buffer.from(cell, 'latin1').toString('utf8')));
     if (JSON.stringify(recovered) !== JSON.stringify(nsv.parse(text))) {
@@ -211,8 +201,6 @@ async function testBufferChunksAreBytes() {
       process.exit(1);
     }
 
-    // Chunking invariance: split at every byte position, so every code point
-    // gets cut at every interior byte at some point
     for (let split = 0; split <= bytes.length; split++) {
       const chunks = [bytes.slice(0, split), bytes.slice(split)];
       for (const [path, rows] of await readBoth(chunks)) {
@@ -227,14 +215,12 @@ async function testBufferChunksAreBytes() {
     console.log(`  ✓ ${name}: byte-faithful, all ${bytes.length + 1} split positions, Reader and read()`);
   }
 
-  // Combined: one boundary inside an escape sequence, a later one inside a
-  // code point ('a\nb' encodes as 'a\\nb'; the 🎉 is cut mid-sequence)
   {
     const text = 'a\\nb\n\né\u{1f389}\n\n';
     const bytes = Buffer.from(text, 'utf8');
     const expected = nsv.parse(bytes.toString('latin1'));
-    const escapeSplit = 2; // between '\\' and 'n'
-    const codePointSplit = bytes.length - 4; // inside the 4-byte 🎉
+    const escapeSplit = 2;
+    const codePointSplit = bytes.length - 4;
     const chunks = [
       bytes.slice(0, escapeSplit),
       bytes.slice(escapeSplit, codePointSplit),
