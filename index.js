@@ -240,8 +240,8 @@ class Reader {
     this._atLineStart = true;
     this._rowQueue = [];
     this._rowQueueHead = 0;
-    this._ended = false;
     this._started = false;
+    this._ended = false;
     this._error = null;
   }
 
@@ -256,7 +256,7 @@ class Reader {
     // If input is a string, process it directly
     if (typeof this.input === 'string') {
       this._processChunk(this.input);
-      this._finalize();
+      this._ended = true;
       return;
     }
 
@@ -271,7 +271,7 @@ class Reader {
     });
 
     this.input.on('end', () => {
-      this._finalize();
+      this._ended = true;
     });
 
     this.input.on('error', (error) => {
@@ -302,14 +302,6 @@ class Reader {
       this._rowQueue.push(row);
     }
     this._partial = end < text.length ? text.slice(end) : '';
-  }
-
-  /**
-   * Finalize when input ends; an unterminated final row stays in partial()
-   * @private
-   */
-  _finalize() {
-    this._ended = true;
   }
 
   /**
