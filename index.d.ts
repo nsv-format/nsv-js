@@ -93,8 +93,8 @@ export class Reader {
   readRow(): Promise<string[] | null>;
 
   /**
-   * Raw encoded text of the unterminated row in progress, as consumed so far
-   * @returns The unparsed tail; empty when there is none
+   * Raw encoded text of the row in progress, as consumed so far
+   * @returns The unparsed text; empty when there is none
    */
   partial(): string;
 

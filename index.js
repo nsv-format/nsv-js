@@ -236,7 +236,8 @@ class Reader {
    */
   constructor(input) {
     this.input = input;
-    this._tailPieces = [];
+    this._partial = '';
+    this._atLineStart = true;
     this._rowQueue = [];
     this._rowQueueHead = 0;
     this._ended = false;
@@ -282,10 +283,6 @@ class Reader {
    * Process a chunk of text, extracting complete rows
    * @private
    */
-  /**
-   * Process a chunk of text, extracting complete rows
-   * @private
-   */
   _processChunk(text) {
     if (text.length === 0) {
       return;
@@ -293,30 +290,22 @@ class Reader {
     let end = text.lastIndexOf('\n\n');
     if (end !== -1) {
       end += 2;
-    } else if (text[0] === '\n' && this._atLineStart()) {
+    } else if (text[0] === '\n' && this._atLineStart) {
       end = 1;
     }
+    this._atLineStart = text[text.length - 1] === '\n';
     if (end === -1) {
-      this._tailPieces.push(text);
+      this._partial += text;
       return;
     }
-    this._tailPieces.push(text.slice(0, end));
-    for (const row of parse(this._tailPieces.join(''))) {
+    for (const row of parse(this._partial + text.slice(0, end))) {
       this._rowQueue.push(row);
     }
-    this._tailPieces = end < text.length ? [text.slice(end)] : [];
+    this._partial = end < text.length ? text.slice(end) : '';
   }
 
   /**
-   * @private
-   */
-  _atLineStart() {
-    const pieces = this._tailPieces;
-    return pieces.length === 0 || pieces[pieces.length - 1].endsWith('\n');
-  }
-
-  /**
-   * Finalize when input ends; an incomplete trailing row stays buffered, not emitted
+   * Finalize when input ends; an unterminated final row stays in partial()
    * @private
    */
   _finalize() {
@@ -352,16 +341,13 @@ class Reader {
   }
 
   /**
-   * Raw encoded text of the unterminated row in progress, as consumed so far
-   * @returns {string} The unparsed tail; empty when there is none
+   * Raw encoded text of the row in progress, as consumed so far
+   * @returns {string} The unparsed text; empty when there is none
    */
   partial() {
     this._start();
 
-    if (this._tailPieces.length > 1) {
-      this._tailPieces = [this._tailPieces.join('')];
-    }
-    return this._tailPieces.length === 1 ? this._tailPieces[0] : '';
+    return this._partial;
   }
 
   /**

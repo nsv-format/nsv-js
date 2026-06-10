@@ -237,21 +237,21 @@ async function runTests() {
     console.log('✓ Reader - empty rows match parse()');
   }
 
-  // Test 23c: Reader buffers incomplete trailing row (resumable EOF semantics)
+  // Test 23c: Reader withholds an unterminated final row
   {
     const reader1 = new nsv.Reader('a\nb\n\nc\nd');
-    assertEqual(await reader1.readRow(), ['a', 'b'], 'Reader - complete row before incomplete tail');
-    assertEqual(await reader1.readRow(), null, 'Reader - incomplete tail buffered, not emitted');
+    assertEqual(await reader1.readRow(), ['a', 'b'], 'Reader - row before unterminated row');
+    assertEqual(await reader1.readRow(), null, 'Reader - unterminated row not emitted');
 
     const reader2 = new nsv.Reader('a\nb\n\nc\nd\n');
-    assertEqual(await reader2.readRow(), ['a', 'b'], 'Reader - complete row before unterminated row');
-    assertEqual(await reader2.readRow(), null, 'Reader - unterminated row buffered, not emitted');
+    assertEqual(await reader2.readRow(), ['a', 'b'], 'Reader - row before cell-terminated row');
+    assertEqual(await reader2.readRow(), null, 'Reader - cell-terminated row not emitted');
 
-    assertEqual(nsv.parse('a\nb\n\nc\nd'), [['a', 'b'], ['c', 'd']], 'parse - emits incomplete tail');
-    console.log('✓ Reader buffers incomplete trailing row');
+    assertEqual(nsv.parse('a\nb\n\nc\nd'), [['a', 'b'], ['c', 'd']], 'parse - emits unterminated row');
+    console.log('✓ Reader withholds an unterminated final row');
   }
 
-  // Test 23d: partial() exposes the unterminated tail
+  // Test 23d: partial() exposes the row in progress
   {
     const inputs = [
       'a\nb\n\nc\nd',
@@ -279,7 +279,7 @@ async function runTests() {
     const reader2 = new nsv.Reader('a\nb\n\n');
     await reader2.readRows();
     assertEqual(reader2.partial(), '', 'partial - empty on terminated input');
-    console.log('✓ partial() exposes the unterminated tail');
+    console.log('✓ partial() exposes the row in progress');
   }
 
   // Test 24: Empty data array
